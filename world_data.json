@@ -1,0 +1,161 @@
+{
+  "locations": {
+    "shingwan_1f": {
+      "name": "신관 1층",
+      "description": "중앙 현관이 있는 곳. 한때 꿈과 희망이 적혀있던 게시판엔 이제 '자진 입대 명단'만이 가득합니다.",
+      "gimmick": "자진 입대 명단 확인: [정신력] 판정 필요",
+      "items": ["부러진 분필", "찢어진 명찰"],
+      "threats": "복도를 순찰하는 빨간모자 수색대",
+      "adj_sectors": ["shingwan_2f", "snack_bar", "hall"]
+    },
+    "shingwan_2f": {
+      "name": "신관 2층",
+      "description": "끝없이 이어지는 복도. 벽면의 사물함마다 학생들의 비명이 데이터 노이즈로 변해 흘러나옵니다.",
+      "gimmick": "해킹 공격과 교실 진입: [박수 2번 + 공중제비]",
+      "items": ["실내화", "매점 쿠폰"],
+      "threats": "천장의 감시 카메라 (하이퍼 이사장의 눈)",
+      "adj_sectors": ["shingwan_1f", "hacking_lab", "library","KT_room"]
+    },
+    "KT_room": {
+      "name": "KT실",
+      "description": "일반적인 용도로 사용된 것이 아닌 방.",
+      "gimmick": "KT 방에서 정보 수집: [지식 더듬기] 판정 필요",
+      "items": ["사이버 민모의 월급"],
+      "adj_sectors": ["shingwan_2f"]
+    },
+    "snack_bar": {
+      "name": "매점",
+      "description": "학생들이 간단한 음식을 구매하던 곳. 기괴한 간식들만이 유통기한을 넘긴 채 쌓여 있습니다.",
+      "gimmick": "매점에서 음식 구매: [매점 쿠폰] 필요",
+      "items": ["티즐", "1m 젤리", "아이스크림", "뻥튀기"],
+      "adj_sectors": ["shingwan_1f"]
+    },
+    "hacking_lab": {
+      "name": "해킹 공격과 교실",
+      "description": "기괴한 의식을 치러야만 들어올 수 있는 방. 컴퓨터가 유저의 과거를 실시간으로 해킹 중입니다.",
+      "gimmick": "터미널 보안 해제: [해킹] 판정 필요",
+      "items": ["사이버 민모의 메인보드", "디버깅용 포션"],
+      "threats": "가디언 프로그램 '하미영'",
+      "adj_sectors": ["shingwan_2f"]
+    },
+    "library": {
+      "name": "도서관",
+      "description": "데이터 파편이 책 형태로 꽂혀 있는 곳. 소리를 내면 책들이 폭발합니다.",
+      "gimmick": "금서 구역 탐색: [지식 더듬기] 판정 필요",
+      "items": ["사이버 민모의 로그 파일"],
+      "adj_sectors": ["shingwan_2f"]
+    },
+    "hall": {
+      "name": "중앙 홀",
+      "description": "모든 건물이 뒤틀린 채 연결된 카오스의 허브. 방향 감각을 잃기 쉽습니다.",
+      "gimmick": "방향 감각 유지: [정신력] 판정 (실패 시 무작위 구역 이동)",
+      "items": ["나침반","잃어버린 외출증"],
+      "threats": "길을 잃은 거대 변이 디미충",
+      "adj_sectors": ["shingwan_1f", "smart_farm", "dorm", "main_1f"]
+    },
+    "smart_farm": {
+      "name": "변이된 스마트팜",
+      "description": "식생이 폭발하여 천장까지 뒤덮은 정글. 식물들이 유저의 이름을 부르며 유혹합니다.",
+      "gimmick": "식인 식물 회피: [위험 돌파] 판정 필요",
+      "items": ["이상한 열매", "모종삽"],
+      "threats": "뿌리로 감싸진 사이버 드럼통들",
+      "adj_sectors": ["hall"]
+    },
+    "dorm": {
+      "name": "기숙사",
+      "description": "빨간모자 광신도들에 의해 점령되어버린 생활 공간. 복도엔 세뇌용 기상송이 반복됩니다.",
+      "gimmick": "빨간모자 광신도와의 대화: [설득] 판정 필요",
+      "items": ["빨간모자", "기상송 신청권"],
+      "threats": "빨간모자 광신도 집단",
+      "adj_sectors": ["hall", "dorm_basement"]
+    },
+    "dorm_basement": {
+      "name": "기숙사 지하",
+      "description": "버려진 학생들의 신발에서 나는 악취와 습기가 가득한 음침한 통로.",
+      "gimmick": "냄새 속 단서 찾기: [인내] 판정 필요",
+      "items": ["냄새나는 신발", "지하 창고 열쇠"],
+      "adj_sectors": ["dorm", "art_room", "self_study_room"]
+    },
+    "art_room": {
+      "name": "미술실",
+      "description": "조각상들이 하이퍼 이사장의 얼굴로 변해 유저를 비웃고 있습니다.",
+      "gimmick": "초상화 개조하기: [예술] 판정 필요",
+      "items": ["붉은 물감", "조각칼"],
+      "adj_sectors": ["dorm_basement"]
+    },
+    "self_study_room": {
+      "name": "자습실 (인강실)",
+      "description": "사이버 드럼통들이 앉아 자습을 하는 기괴한 풍경. 정적이 흐릅니다.",
+      "gimmick": "강제 자습 모드: 10초간 부동자세 유지",
+      "items": ["졸음방지 껌", "검은 펜","사이버 민모의 마우스"],
+      "adj_sectors": ["dorm_basement"]
+    },
+    "main_1f": {
+      "name": "본관 1층",
+      "description": "하이퍼 이사장의 압도적인 물리력이 느껴지는 통제 구역.",
+      "gimmick": "CCTV 사각지대 이동: [민첩] 판정 필요",
+      "items": ["행정실 봉투"],
+      "adj_sectors": ["hall", "stability_room", "teachers_room", "main_2f"]
+    },
+    "stability_room": {
+      "name": "안정실",
+      "description": "잠시 휴식을 취할 수 있지만, 언제든 '행줌마'가 들이닥칠 수 있는 불안한 피난처.",
+      "gimmick": "안정실 급습 방어: [전투] 판정 필요",
+      "items": ["안정실 출입권"],
+      "threats": "행줌마",
+      "adj_sectors": ["main_1f"]
+    },
+    "teachers_room": {
+      "name": "교무실",
+      "description": "선생님들이 일하던 공간. 각종 비리 자료와 압수된 노트북 조각이 숨겨져 있습니다.",
+      "gimmick": "선생님의 환영과 대화: [설득] 판정 필요",
+      "items": ["이사장 비리 자료", "빼앗긴 노트북 조각"],
+      "adj_sectors": ["main_1f"]
+    },
+    "main_2f": {
+      "name": "본관 2층",
+      "description": "사이버 드럼통들이 정적을 지키고 있는 복도.",
+      "gimmick": "드럼통 사이 숨어들기: [은신] 판정 필요",
+      "items": ["사물함 자물쇠"],
+      "adj_sectors": ["main_1f", "classroom_2f", "club_room", "main_3f"]
+    },
+    "classroom_2f": {
+      "name": "2층 교실",
+      "description": "학생들이 수업을 듣던 곳. 칠판에는 알 수 없는 코드가 적혀 있습니다.",
+      "gimmick": "칠판의 암호 해독: [지능] 판정 필요",
+      "items": ["교과서"],
+      "adj_sectors": ["main_2f"]
+    },
+    "club_room": {
+      "name": "동아리실",
+      "description": "각종 동아리 용품이 뒤섞여 '연합동아리'라는 고철 괴물을 형성한 장소.",
+      "gimmick": "동아리 물품 조합: [제작] 판정 필요",
+      "items": ["납땜 인하", "망가진 드론","사이버 민모의 몸체"],
+      "threats": "고철 괴물 '연합동아리'",
+      "adj_sectors": ["main_2f"]
+    },
+    "main_3f": {
+      "name": "본관 3층",
+      "description": "옥상 골프장으로 향하는 최후의 관문. 데이터 노이즈가 심합니다.",
+      "gimmick": "노이즈 폭풍 돌파: [체력] 판정 필요",
+      "items": ["사이버 민모의 그래픽카드", "골프장 열쇠"],
+      "threats": "하이퍼 이사장 직속 비서",
+      "adj_sectors": ["main_2f", "rooftop_golf"]
+    },
+    "rooftop_golf": {
+      "name": "옥상 골프장",
+      "description": "하이퍼 이사장이 개인 골프 연습을 하기 위해 설치한 장소.",
+      "gimmick": "골프공 탄막 피하기: [민첩] 판정 필요",
+      "items": ["정문 열쇠"],
+      "threats": "하이퍼 이사장 (최종 보스)",
+      "adj_sectors": ["main_3f"]
+    }
+  },
+  "global_setting": {
+    "world_name": "네오 디미고",
+    "main_boss": "하이퍼 이사장",
+    "ally": "사이버 민모 (의식 데이터)",
+    "current_day": "무한 루프 중인 평일",
+    "victory_condition": "노트북 부품 수집 및 이사장 격퇴"
+  }
+}
