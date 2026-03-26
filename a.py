@@ -3,6 +3,7 @@ import random
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
+import token_tracker
 
 load_dotenv()
 
@@ -124,15 +125,15 @@ summary = ""
 
 # 🎲 주사위 함수
 def roll_dice():
-    return random.randint(1, 20)
+    return random.randint(1, 100)
 
 
 # 🎯 판정 처리
 def handle_roll(action):
     dice = roll_dice()
     stat = player.get(action["stat"], 0)
-    total = dice + stat
-    success = total >= action["difficulty"]
+    total = stat - dice
+    success = total >= 0
 
     return {"dice": dice, "total": total, "success": success}
 
@@ -172,6 +173,8 @@ def call_llm(messages: list) -> str | None:
     response = client.chat.completions.create(
         max_tokens=120, model="gpt-5-mini", messages=messages, temperature=0.7
     )
+    data = token_tracker.log_usage(response)
+    token_tracker.save_log(data)
     return response.choices[0].message.content
 
 
@@ -190,6 +193,7 @@ while True:
         {"role": "user", "content": user_input},
     ]
     ai_response = call_llm(messages)
+    token_tracker.save_history(user_input, ai_response)
 
     # 👉 JSON인지 확인
     try:
