@@ -1,74 +1,122 @@
 import json
 import random
 
-global data
-data = {}
-try:
-    with open("./world_data.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-except:
-    print("파일 로드 실패")
-nicknames = ["준현", "영민", "세민", "자명", "유민", "태인"]
+# 1. 다양한 장르와 시나리오 기초 데이터
+scenarios = [
+    {
+        "genre": "Cyberpunk Horror",
+        "tone": "Glitchy and Oppressive",
+        "stats": ["Agility", "Intel", "Sanity"],
+        "locations": [
+            {
+                "name": "폐쇄된 서버룸",
+                "desc": "지직거리는 모니터와 타버린 전선들",
+                "interact": "중앙 단말기",
+            },
+            {
+                "name": "오염된 매점",
+                "desc": "유통기한 지난 합성 단백질 팩들이 쌓인 곳",
+                "interact": "자판기",
+            },
+        ],
+    },
+    {
+        "genre": "High Fantasy",
+        "tone": "Epic and Magical",
+        "stats": ["Strength", "Magic", "Charisma"],
+        "locations": [
+            {
+                "name": "드래곤의 둥지",
+                "desc": "금화가 산처럼 쌓여 있고 열기가 가득함",
+                "interact": "보물 상자",
+            },
+            {
+                "name": "엘프의 숲",
+                "desc": "푸른 빛이 감도는 고대 나무들의 쉼터",
+                "interact": "성스러운 샘물",
+            },
+        ],
+    },
+    {
+        "genre": "Space Opera",
+        "tone": "Cold and Vast",
+        "stats": ["Piloting", "Tech", "Willpower"],
+        "locations": [
+            {
+                "name": "버려진 우주선함교",
+                "desc": "깨진 창밖으로 소리 없는 우주가 보임",
+                "interact": "비상 레버",
+            },
+            {
+                "name": "외계 행성 기지",
+                "desc": "붉은 모래바람이 기지 외벽을 때리는 소리",
+                "interact": "통신 안테나",
+            },
+        ],
+    },
+]
+
+# 2. 유저의 일반적인 행동 패턴
+user_actions = [
+    {
+        "act": "조심스럽게 접근해서 {target}을 조사할래.",
+        "stat_idx": 1,
+    },  # 주로 Intel/Magic/Tech
+    {
+        "act": "{target}을 발로 차거나 힘으로 부술 거야!",
+        "stat_idx": 0,
+    },  # 주로 Agility/Strength/Piloting
+    {
+        "act": "주변에 누가 있는지 소리쳐서 부를래.",
+        "stat_idx": 2,
+    },  # 주로 Sanity/Charisma/Willpower
+]
 
 
-templates = {
-    "success": [
-        "행운이 당신을 미소 짓게 합니다. {description} 속에서 당신은 보란 듯이 성공해냅니다.",
-        "데이터 노이즈를 뚫고 정확한 타이밍에 행동했습니다. {name}의 공기가 미세하게 바뀝니다.",
-    ],
-    "fail": [
-        "무언가 잘못되었습니다. {name}의 어둠이 당신의 발목을 잡습니다.",
-        "치명적인 실수입니다. 하이퍼 이사장의 비웃음 소리가 귓가를 때립니다.",
-    ],
-}
-
-
-def generate_jsonl(count=50):
+def generate_universal_jsonl(output_file="./universal_trpg_train.jsonl", count=100):
     dataset = []
-    locations = list(data["locations"].keys())
 
     for _ in range(count):
-        loc_key = random.choice(locations)
-        loc = data["locations"][loc_key]
+        # 랜덤 시나리오 및 장소 선택
+        scn = random.choice(scenarios)
+        loc = random.choice(scn["locations"])
+        action_tpl = random.choice(user_actions)
 
-        # 주사위 결과 및 성공 여부 결정
-        roll = random.randint(2, 12)
-        is_success = roll >= 7
-        nickname = random.choice(nicknames)
-        # 템플릿 선택 및 문장 생성
-        base_desc = random.choice(
-            templates["success"] if is_success else templates["fail"]
-        )
-        narrative = base_desc.format(name=loc["name"], description=loc["description"])
+        user_input = action_tpl["act"].format(target=loc["interact"])
+        target_stat = scn["stats"][action_tpl["stat_idx"]]
 
-        # JSONL 구조 생성
+        # 1. 판정 요청 데이터 (ROLL_REQUEST)
+        # AI가 결과를 바로 내지 않고 주사위를 요구하는 법을 배워야 함
+        input_text = f"### [Scenario]\nGenre: {scn['genre']}\nTone: {scn['tone']}\nStats: {scn['stats']}\nCurrent: {loc['name']} ({loc['desc']})\n\n### [User Action]\n\"{user_input}\""
+
+        output_data = {
+            "narrative": {
+                "description": f"{scn['genre']}의 분위기가 감도는 가운데, 당신은 {loc['name']}에서 {user_input} 시도합니다.",
+                "log": f"{target_stat} 판정이 필요합니다.",
+                "npc_talk": "",
+            },
+            "action_required": {
+                "type": "ROLL_REQUEST",
+                "stat": target_stat,
+                "difficulty": random.randint(7, 10),
+                "dice_type": "2d6",
+            },
+        }
+
         entry = {
-            "instruction": "너는 호러 TRPG '네오 디미고'의 마스터다. 유저 상태와 World Data를 분석해 상황을 서술하고 JSON 포맷으로 응답하라.",
-            "input": f"### [현재 상태]\n- 위치: {loc['name']}\n- 이름: {nickname}\n- HP: 10, 정신력: 10\n\n### [World Data]\n- 장소: {loc['name']}\n- 기믹: {loc['gimmick']}\n\n### [유저 입력]\n\"주변을 조사하거나 기믹을 시도한다.\"\n\n### [판정 결과]\n- 주사위: {roll}",
-            "output": json.dumps(
-                {
-                    "narrative": {
-                        "situation_description": narrative,
-                        "system_log": f"판정 {'성공' if is_success else '실패'}! 현재 위치: {loc['name']}",
-                        "minmo_whisper": "{nickname}, 데이터 동기화 완료. 조심해서 움직여.",
-                    },
-                    "game_state_update": {
-                        "current_location": loc_key,
-                        "status_changes": {"hp_delta": 0 if is_success else -1},
-                    },
-                },
-                ensure_ascii=False,
-            ),
+            "instruction": "제공된 시나리오 데이터에 근거하여 TRPG 마스터링을 진행하고 JSON으로 응답하라.",
+            "input": input_text,
+            "output": json.dumps(output_data, ensure_ascii=False),
         }
         dataset.append(entry)
 
-    # JSONL 파일로 저장
-    with open("neo_dimigo_train.jsonl", "w", encoding="utf-8") as f:
+    # JSONL 저장
+    with open(output_file, "w", encoding="utf-8") as f:
         for item in dataset:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
-    print(f"✅ {count}개의 학습 데이터가 생성되었습니다!")
+    print(f"✅ {count}개의 범용 학습 데이터가 '{output_file}'에 저장되었습니다.")
 
 
 if __name__ == "__main__":
-    generate_jsonl(500)
+    generate_universal_jsonl(count=400)
