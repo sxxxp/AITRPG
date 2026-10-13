@@ -1,3 +1,20 @@
-*.txt
-/web/my-app/
+# 의존성 / 빌드 결과물
+node_modules/
+dist/
+
+# 비밀값이 들어갈 환경 변수 (.env.example, .env.development 는 커밋)
 .env
+.env.local
+.env.*.local
+
+# 엑셀/오피스 임시 잠금 파일
+~$*
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 로그
+*.log

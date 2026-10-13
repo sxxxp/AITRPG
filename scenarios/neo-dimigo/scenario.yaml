@@ -1,0 +1,645 @@
+# 네오 디미고 — 시나리오 파일
+# 포맷: docs/기능명세서.md §6 (format_version 1)
+
+format_version: 1
+
+meta:
+  id: neo-dimigo
+  title: 네오 디미고
+  author: 미정
+  summary: >-
+    시공간이 뒤틀려 영원히 평일만 반복되는 네오 디미고. 하이퍼 이사장에게 맞서
+    사이버 민모의 노트북 조각을 모으고, 중앙 계단을 한 층씩 뚫어 옥상 골프장으로 향하라.
+  players: { min: 1, max: 4 }
+  estimated_minutes: 150
+  rating: 12세
+  tags: [코미디, SF, 학교, 탐험]
+  language: ko
+  start_scene: main_lobby
+
+# ─────────────────────────────── 규칙 ───────────────────────────────
+ruleset:
+  stats: [코딩, 체력, 눈치, 말빨]
+  resources:
+    hp: { max: "10 + 체력", min: 0 }
+  check: { dice: "1d20", formula: "roll + stat" }
+  critical: { success: 20, failure: 1 }
+  character_creation:
+    method: point_buy
+    total_points: 12
+    min_per_stat: 1
+    max_per_stat: 5
+    allow_custom: true
+
+presets:
+  web_dev:
+    name: 웹프로그래밍과 신입
+    description: "타입 에러를 보면 잠이 안 오는 프론트엔드 지망생. 어떤 문제든 일단 콘솔부터 연다."
+    stats: { 코딩: 4, 체력: 2, 눈치: 3, 말빨: 3 }
+  hacking_defense:
+    name: 해킹방어과 2학년
+    description: "뒤틀린 세계의 '해킹 공격과'를 보고 묘한 경쟁심을 느낀다. 방화벽 같은 성격."
+    stats: { 코딩: 5, 체력: 2, 눈치: 3, 말빨: 2 }
+  digital_contents:
+    name: 디지털콘텐츠과 밤샘 렌더러
+    description: "렌더링을 기다리며 단련된 체력과, 프레임 하나도 놓치지 않는 눈."
+    stats: { 코딩: 2, 체력: 4, 눈치: 4, 말빨: 2 }
+  ebusiness:
+    name: 이비즈니스과 창업 동아리장
+    description: "식인 식물에게도 사업 계획서를 내밀 수 있는 사람."
+    stats: { 코딩: 2, 체력: 3, 눈치: 2, 말빨: 5 }
+
+variables:
+  laptop_pieces: 0                        # 사이버 민모에게 전달한 노트북 조각 수
+  bread_taken: 0
+  mushrooms_taken: 0
+
+statuses:
+  brainwashed:
+    name: 빨간모자 세뇌
+    description: "빨간모자의 명령만 들린다. 스스로 행동할 수 없다."
+    duration: until_removed
+    restrict_actions: true
+    on_turn_start:
+      - { op: narrate_hint, text: "머릿속에서 '점호! 점호!' 소리가 울린다." }
+    resist:                               # 매 턴 시작 시 저항 판정
+      check: { stat: 눈치, dc: 14 }
+      on_success:
+        - { op: remove_status, status: brainwashed }
+  entangled:
+    name: 덩굴 속박
+    description: "식인 식물의 덩굴이 팔다리를 감았다."
+    duration: 2
+    restrict_actions: true
+  concreted:
+    name: 공구리
+    description: "사이버 콘크리트에 하반신이 굳어 버렸다."
+    duration: 2
+    restrict_actions: true
+
+# ─────────────────────────────── AI 서술 가이드 ───────────────────────────────
+ai_guide:
+  tone: "진지한 척하는 B급 학교 SF 코미디. 상황은 기괴하지만 서술은 담담하게, 밈은 과하지 않게."
+  narration_length: short
+  style_rules:
+    - "2~3문장. 감각 묘사 하나와 상황 변화 하나."
+    - "HP, 주사위 값 같은 수치는 말하지 않는다."
+    - "폭력은 코믹하게. 공구리는 '드럼통에 담겨 굳는다' 수준까지만 묘사한다."
+    - "시나리오에 없는 아이템, 장소, 출구를 만들어내지 않는다."
+  world_lore: |
+    불의의 사고로 시공간이 뒤틀린 네오 디미고는 영원히 평일만 반복된다. 주말은 오지 않는다.
+    초자연 현상에 집착하던 하이퍼 이사장은 초능력(괴력, 순간이동)을 각성해 학생 대부분을
+    사이버 드럼통에 공구리 쳤고, 다른 차원의 디미고인들을 끝없이 네오 디미고로 '자진 입대'시키고 있다.
+    교내 곳곳은 뒤틀림으로 변이되었다. 기숙사는 사감 빨간모자를 따르는 빨간모자단의 소굴,
+    스마트 팜은 식인 식물의 정글, 실내체육관은 습기 속에서 당구대에 버섯을 기르는 레지스탕스의 기지다.
+    중앙 계단은 층마다 사이버 콘크리트로 봉인되어 옥상 골프장으로 올라갈 수 없다.
+  glossary:
+    네오 디미고: "시공간이 뒤틀린 디미고. 영원히 평일만 반복된다."
+    자진 입대: "다른 차원의 디미고인이 네오 디미고로 끌려오는 현상. 본인 의사는 묻지 않는다."
+    사이버 드럼통: "이사장이 학생들을 가둬 굳혀 버리는 빛나는 드럼통."
+    공구리: "사이버 콘크리트로 굳혀 버리는 이사장의 기술."
+    디미파이: "학교 네트워크. 사이버 민모의 의식이 업로드되어 있다."
+    빨간모자단: "사감 빨간모자를 따르는 광신도 집단. 빨간모자를 쓰면 세뇌된다."
+    코드 베이커리: "신관에서 배고픈 학생들에게 빵을 나눠주는 학생들."
+
+# ─────────────────────────────── 아이템 ───────────────────────────────
+items:
+  laptop_battery:
+    name: "노트북 조각: 배터리"
+    description: "디미충의 등껍질 틈에 끼어 있던 배터리. 아직 초록불이 깜빡인다."
+    consumable: false
+    effects: []
+  laptop_keyboard:
+    name: "노트북 조각: 키보드"
+    description: "사감실 금고에 압수품으로 보관되어 있던 키보드. Esc 키만 닳아 있다."
+    consumable: false
+    effects: []
+  laptop_mainboard:
+    name: "노트북 조각: 메인보드"
+    description: "식인 식물 뿌리에 감겨 있던 메인보드. 뿌리가 회로를 따라 자라 있다."
+    consumable: false
+    effects: []
+  laptop_screen:
+    name: "노트북 조각: 화면"
+    description: "해킹 공격과 CTF의 우승 상품. 화면 구석에 사이버 민모의 바탕화면이 남아 있다."
+    consumable: false
+    effects: []
+  code_bread:
+    name: 코드 베이커리 빵
+    description: "갓 구운 빵. 포장지에 hello world가 찍혀 있다."
+    consumable: true
+    effects:
+      - { op: add_resource, resource: hp, value: "1d6+1" }
+  billiard_mushroom:
+    name: 당구대 버섯
+    description: "레지스탕스가 당구대에서 기른 버섯. 정신이 번쩍 든다."
+    consumable: true
+    effects:                              # 동료에게 사용하면 세뇌를 풀 수 있다
+      - { op: add_resource, resource: hp, value: "2" }
+      - { op: remove_status, status: brainwashed }
+  red_hat:
+    name: 빨간모자
+    description: "누군가 벗어 둔 빨간모자. 쓰고 싶어지는 이상한 끌림이 있다."
+    consumable: true
+    effects:                              # 쓰는 순간 세뇌
+      - { op: apply_status, status: brainwashed }
+
+# ─────────────────────────────── NPC ───────────────────────────────
+npcs:
+  cyber_minmo:
+    name: 사이버 민모
+    personality: "레지스탕스의 수장. 침착하고 계산적이지만 노트북 이야기만 나오면 서러워진다."
+    speech_style: "모니터 자막으로 말한다. 짧고 단호한 반말, 가끔 로딩 중 표시가 끼어든다."
+    knows:
+      - "뒤틀리기 전 이름은 강민모. 공구리 직전에 의식을 디미파이에 업로드했다."
+      - "노트북 조각은 식당, 기숙사, 스마트 팜, 그리고 4층 어딘가에 흩어져 있다."
+      - "조각을 하나 돌려받을 때마다 중앙 계단의 봉인을 한 층씩 해킹할 수 있다."
+      - "노트북이 완성되면 이사장의 초능력을 무력화할 수 있다."
+    secrets:                              # 이 힌트는 2층 드럼통 속 학생에게서만 얻도록
+      - "4층 교실 입장 방법: 교탁 앞에서 박수 두 번과 공중제비"
+    fixed_lines:
+      greeting: "...접속 확인. 다른 차원에서 자진 입대당했구나. 반갑다. 내 노트북을 찾아 줘."
+      all_pieces: "노트북 복구 완료. 이사장의 초능력, 지금부터 내가 막는다."
+
+  hyper_chairman:
+    name: 하이퍼 이사장
+    personality: "초자연 현상에 미쳐 버린 이사장. 자신이 학교를 '완성'시켰다고 믿는다."
+    speech_style: "과장된 연설조. 모든 문장을 골프 비유로 끝내려 한다."
+    knows: ["시공간 뒤틀림의 원인", "옥상 골프장"]
+    secrets:
+      - "초능력은 뒤틀림에서 나온다. 디미파이로 뒤틀림을 차단하면 평범한 사람이 된다."
+    fixed_lines:
+      greeting: "어서 오게, 신입생. 네오 디미고에 주말은 없네. 홀인원도 없지."
+
+  red_hat_warden:
+    name: 사감 빨간모자
+    personality: "점호와 규율에 집착하는 기숙사 사감. 빨간모자단의 교주."
+    speech_style: "호루라기를 섞어 외치는 명령조."
+    knows: ["사감실 금고에 압수품이 있다"]
+    secrets: ["매 정각 옥상 방향으로 경례하러 사감실을 비운다"]
+    fixed_lines:
+      greeting: "점호 시간이다! 모자는 어디 갔지?"
+
+  code_bakers:
+    name: 코드 베이커리 학생들
+    personality: "세상이 뒤틀려도 빵은 구워야 한다고 믿는 다정한 학생들."
+    speech_style: "밝은 존댓말. 빵 이름을 프로그래밍 용어로 짓는다."
+    knows:
+      - "식당의 디미충은 늘 배가 고프다. 빵 냄새에 정신을 못 차린다."
+      - "실내체육관에 레지스탕스가 있다."
+    secrets: []
+    fixed_lines:
+      greeting: "어서 오세요! 오늘의 빵은 갓 컴파일된 소보로예요."
+
+  mushroom_keeper:
+    name: 레지스탕스 버섯지기
+    personality: "습기에 적응해 버린 레지스탕스 대원. 버섯 이야기를 멈추지 않는다."
+    speech_style: "느긋한 반말."
+    knows: ["당구대 버섯은 세뇌를 풀어 준다"]
+    secrets: []
+    fixed_lines:
+      greeting: "안경 닦지 마. 어차피 또 김 서려."
+
+  drummed_student:
+    name: 드럼통 속 학생
+    personality: "목만 내놓고 굳어 버린 학생. 의외로 침착하다."
+    speech_style: "체념한 존댓말."
+    knows: ["4층 해킹 공격과 교실은 교탁 앞에서 박수 두 번, 공중제비를 돌아야 열린다"]
+    secrets: []
+    fixed_lines:
+      greeting: "...혹시 지금 무슨 요일이에요? 아, 평일이죠. 알아요."
+
+  hacking_students:
+    name: 해킹 공격과 학생들
+    personality: "뒤틀린 세계에서 방어가 아닌 공격만 배운 학생들. 영원히 CTF를 하고 있다."
+    speech_style: "빠르고 건조한 말투. 칭찬 대신 플래그 형식으로 말한다."
+    knows: ["CTF 우승 상품은 노트북 화면이다"]
+    secrets: []
+    fixed_lines:
+      greeting: "DIMI{welcome}. 문제 풀 거 아니면 나가."
+
+# ─────────────────────────────── 장면 ───────────────────────────────
+scenes:
+  main_lobby:
+    name: 본관 로비
+    description: "형광등이 '평일'이라는 글자로 깜빡인다. 복도 끝까지 빛나는 사이버 드럼통이 줄지어 서 있다."
+    objects:
+      enlistment_form:
+        name: 자진 입대 신청서
+        on_examine:
+          actions:
+            - { op: narrate_hint, text: "서명란에 이미 당신의 이름이 적혀 있다. 날짜는 '평일'." }
+      drum_row:
+        name: 사이버 드럼통 행렬
+        on_examine:
+          check: { stat: 눈치, dc: 12 }
+          success:
+            - { op: narrate_hint, text: "드럼통마다 '공구리 완료'와 날짜 대신 '평일'이 찍혀 있다. 옥상 쪽에서 골프공 치는 소리가 들린다." }
+          failure:
+            - { op: narrate_hint, text: "드럼통이 은은하게 웅웅거린다. 오래 보고 있으면 안 될 것 같다." }
+    exits:
+      - { to: new_building, label: 신관 }
+      - { to: cafeteria, label: 식당 }
+      - { to: dormitory, label: 기숙사 }
+      - { to: smart_farm, label: 스마트 팜 }
+      - { to: gym, label: 실내체육관 }
+      - { to: stairs_1, label: 중앙 계단 }
+
+  new_building:
+    name: 신관 · 코드 베이커리
+    description: "복도에 갓 구운 빵 냄새가 가득하다. 앞치마를 두른 학생들이 오븐 앞에서 바쁘게 움직인다."
+    npcs: [code_bakers]
+    objects:
+      bread_shelf:
+        name: 빵 진열대
+        on_interact:
+          condition: "var('bread_taken') < 4"
+          locked_text: "오늘 배급분은 다 나갔다. 내일도 평일이니 내일 다시 오라고 한다."
+          actions:
+            - { op: give_item, item: code_bread }
+            - { op: add_var, var: bread_taken, value: 1 }
+            - { op: narrate_hint, text: "코드 베이커리 학생이 따끈한 빵을 건넨다." }
+    exits:
+      - { to: main_lobby, label: 본관 로비 }
+
+  cafeteria:
+    name: 식당
+    description: "배식대 위에 거대한 변이 디미충이 똬리를 틀고 있다. 식판이 껍데기처럼 흩어져 있다."
+    objects:
+      dimichung:
+        name: 거대 변이 디미충
+        on_examine:
+          check: { stat: 눈치, dc: 11 }
+          success:
+            - { op: narrate_hint, text: "등껍질 틈에서 노트북 배터리가 초록빛으로 깜빡인다. 디미충의 배에서 꼬르륵 소리가 난다." }
+          failure:
+            - { op: narrate_hint, text: "너무 커서 어디가 머리인지도 모르겠다." }
+        on_interact:
+          condition: "not flag('battery_taken')"
+          locked_text: "디미충은 배를 두드리며 잠들어 있다."
+          check: { stat: 눈치, dc: 16 }
+          success:
+            - { op: give_item, item: laptop_battery }
+            - { op: set_flag, flag: battery_taken, value: true }
+            - { op: narrate_hint, text: "숨을 참고 등껍질 틈에서 배터리를 뽑아냈다." }
+          failure:
+            - { op: narrate_hint, text: "디미충이 눈을 떴다." }
+            - { op: start_combat, enemies: [dimichung] }
+    exits:
+      - { to: main_lobby, label: 본관 로비 }
+
+  dormitory:
+    name: 기숙사
+    description: "복도마다 빨간모자를 쓴 학생들이 줄지어 '점호!'를 외친다. 사감실 문틈으로 붉은 빛이 샌다."
+    npcs: [red_hat_warden]
+    objects:
+      shoe_rack:
+        name: 신발장
+        on_examine:
+          condition: "not flag('red_hat_found')"
+          locked_text: "냄새나는 실내화뿐이다."
+          actions:
+            - { op: give_item, item: red_hat }
+            - { op: set_flag, flag: red_hat_found, value: true }
+            - { op: narrate_hint, text: "신발장 위에 빨간모자 하나가 놓여 있다. 쓰지 않는 편이 좋겠다." }
+      roll_call_board:
+        name: 점호 게시판
+        on_examine:
+          check: { stat: 눈치, dc: 12 }
+          success:
+            - { op: set_flag, flag: roll_call_known, value: true }
+            - { op: narrate_hint, text: "근무표 구석의 낙서: '사감님은 매 정각 옥상을 향해 경례하러 자리를 비우심.'" }
+          failure:
+            - { op: narrate_hint, text: "'점호'라는 글자만 빽빽하다." }
+      warden_safe:
+        name: 사감실 금고
+        on_interact:
+          condition: "not flag('keyboard_taken')"
+          locked_text: "금고는 이미 비어 있다."
+          check:
+            stat: 코딩
+            dc: 15
+            modifiers:
+              - { when: "flag('roll_call_known')", bonus: 5 }   # 사감이 자리를 비운 틈
+          success:
+            - { op: give_item, item: laptop_keyboard }
+            - { op: set_flag, flag: keyboard_taken, value: true }
+            - { op: narrate_hint, text: "금고 비밀번호는 '0000'이었다. 압수품 상자 맨 위에 키보드가 있다." }
+          failure:
+            - { op: narrate_hint, text: "경보가 울리고 빨간모자단이 몰려온다!" }
+            - { op: start_combat, enemies: [red_hat_cultist, red_hat_cultist] }
+    exits:
+      - { to: main_lobby, label: 본관 로비 }
+
+  smart_farm:
+    name: 스마트 팜 정글
+    description: "수경 재배 선반을 뚫고 자란 덩굴이 천장을 덮었다. 어딘가에서 '냠' 하는 소리가 난다."
+    objects:
+      irrigation_panel:
+        name: 자동 급수 제어판
+        on_interact:
+          condition: "not flag('irrigation_off')"
+          locked_text: "급수는 이미 꺼져 있다."
+          check: { stat: 코딩, dc: 12 }
+          success:
+            - { op: set_flag, flag: irrigation_off, value: true }
+            - { op: narrate_hint, text: "급수가 멈추자 식물들이 목이 마른 듯 축 늘어진다." }
+          failure:
+            - { op: narrate_hint, text: "스프링클러가 터져 온몸이 젖었다." }
+      giant_root:
+        name: 식인 식물 뿌리
+        on_examine:
+          actions:
+            - { op: narrate_hint, text: "굵은 뿌리 사이로 회로 기판이 보인다. 뿌리가 기판을 꽉 쥐고 있다." }
+        on_interact:
+          condition: "not flag('mainboard_taken')"
+          locked_text: "뿌리에는 빈 자리만 남았다."
+          check:
+            stat: 체력
+            dc: 15
+            modifiers:
+              - { when: "flag('irrigation_off')", bonus: 6 }    # 시든 뿌리는 힘이 약하다
+          success:
+            - { op: give_item, item: laptop_mainboard }
+            - { op: set_flag, flag: mainboard_taken, value: true }
+            - { op: narrate_hint, text: "뿌리를 비틀어 메인보드를 뽑아냈다." }
+          failure:
+            - { op: narrate_hint, text: "뿌리가 꿈틀하더니 식인 식물들이 고개를 든다." }
+            - { op: start_combat, enemies: [man_eating_plant, man_eating_plant] }
+    exits:
+      - { to: main_lobby, label: 본관 로비 }
+
+  gym:
+    name: 실내체육관 · 레지스탕스 기지
+    description: "습기에 안경이 바로 뿌옇게 된다. 당구대마다 버섯이 빽빽하고, 벽 모니터에서 사이버 민모가 깜빡인다."
+    npcs: [cyber_minmo, mushroom_keeper]
+    objects:
+      mushroom_table:
+        name: 당구대 버섯 밭
+        on_interact:
+          condition: "var('mushrooms_taken') < 4"
+          locked_text: "버섯지기가 고개를 젓는다. 다음 수확까지 기다려야 한다."
+          actions:
+            - { op: give_item, item: billiard_mushroom }
+            - { op: add_var, var: mushrooms_taken, value: 1 }
+      repair_bench:
+        name: 노트북 수리 작업대
+        on_examine:
+          actions:
+            - { op: narrate_hint, text: "산산조각 난 노트북 프레임이 놓여 있다. 배터리, 키보드, 메인보드, 화면 자리가 비어 있다." }
+    exits:
+      - { to: main_lobby, label: 본관 로비 }
+
+  stairs_1:
+    name: 중앙 계단 1층
+    description: "위로 향하는 계단이 사이버 콘크리트로 막혀 있다. 콘크리트 표면에 디미파이 로고가 희미하게 떠 있다."
+    exits:
+      - { to: main_lobby, label: 본관 로비 }
+      - to: stairs_2
+        label: 2층
+        condition: "var('laptop_pieces') >= 1"
+        locked_text: "콘크리트가 꿈쩍도 않는다. 사이버 민모라면 해킹할 수 있을지도."
+
+  stairs_2:
+    name: 2층 복도 · 드럼통 보관소
+    description: "공구리된 학생들이 담긴 드럼통이 복도에 빽빽하다. 드럼통 하나에서 '저기요' 소리가 난다."
+    npcs: [drummed_student]
+    objects:
+      talking_drum:
+        name: 말하는 드럼통
+        on_interact:
+          condition: "not flag('student_freed')"
+          locked_text: "학생은 이미 풀려나 레지스탕스로 향했다."
+          check: { stat: 체력, dc: 13 }
+          success:
+            - { op: set_flag, flag: student_freed, value: true }
+            - { op: fixed_text, text: "풀려난 학생: '고마워요. 4층 교탁 앞에서 박수 두 번, 그리고 공중제비. 그래야 해킹 공격과 교실이 열려요.'" }
+          failure:
+            - { op: narrate_hint, text: "콘크리트가 너무 단단하다. 학생이 괜찮다며 웃는다." }
+    exits:
+      - { to: stairs_1, label: 1층 }
+      - to: stairs_3
+        label: 3층
+        condition: "var('laptop_pieces') >= 2"
+        locked_text: "3층으로 가는 계단이 봉인되어 있다."
+
+  stairs_3:
+    name: 3층 복도
+    description: "복도 공기가 일그러져 있다. 바닥에 골프공 하나가 굴러다닌다."
+    exits:
+      - { to: stairs_2, label: 2층 }
+      - to: stairs_4
+        label: 4층
+        condition: "var('laptop_pieces') >= 3"
+        locked_text: "4층으로 가는 계단이 봉인되어 있다."
+
+  stairs_4:
+    name: 4층 복도
+    description: "빈 교실들이 이어진다. 한 교실의 교탁만 이상하게 반짝인다."
+    objects:
+      lectern:
+        name: 반짝이는 교탁
+        on_examine:
+          actions:
+            - { op: narrate_hint, text: "교탁에 손바닥 자국 두 개와, 원을 그리는 발자국이 새겨져 있다." }
+        on_interact:                      # 박수 두 번 + 공중제비
+          check: { stat: 체력, dc: 13 }
+          success:
+            - { op: narrate_hint, text: "짝, 짝. 공중에서 한 바퀴 돌자 교탁 뒤로 교실 문이 열린다." }
+            - { op: move_party, scene: hacking_class }
+          failure:
+            - { op: narrate_hint, text: "공중제비 대신 엉덩방아를 찧었다. 교탁이 비웃듯 반짝인다." }
+            - { op: add_resource, resource: hp, value: "-1" }
+    exits:
+      - { to: stairs_3, label: 3층 }
+      - to: rooftop
+        label: 옥상
+        condition: "flag('laptop_repaired')"
+        locked_text: "옥상 문 너머에서 엄청난 힘이 느껴진다. 이대로는 이사장을 이길 수 없다."
+
+  hacking_class:
+    name: 해킹 공격과 교실
+    description: "모니터 불빛만 가득한 교실. 학생들이 쉬지 않고 키보드를 두드리고, 칠판에는 '방어는 사치'라고 적혀 있다."
+    npcs: [hacking_students]
+    objects:
+      ctf_server:
+        name: CTF 서버
+        on_interact:
+          condition: "not flag('screen_taken')"
+          locked_text: "스코어보드 1위에 당신의 이름이 떠 있다."
+          check: { stat: 코딩, dc: 15 }
+          success:
+            - { op: give_item, item: laptop_screen }
+            - { op: set_flag, flag: screen_taken, value: true }
+            - { op: narrate_hint, text: "플래그 제출 성공. 학생들이 마지못해 상품인 노트북 화면을 건넨다." }
+          failure:
+            - { op: narrate_hint, text: "방화벽이 역공해 왔다. 손끝이 찌릿하다." }
+            - { op: add_resource, resource: hp, value: "-1d4" }
+    exits:
+      - { to: stairs_4, label: 4층 복도 }
+
+  rooftop:
+    name: 옥상 골프장
+    description: "인조 잔디 위에 하이퍼 이사장이 골프채를 들고 서 있다. 하늘에는 '평일'이라는 글자가 떠 있다."
+    npcs: [hyper_chairman]
+    on_enter:
+      - { op: fixed_text, text: "모니터 너머 사이버 민모: '지금이야. 이사장의 초능력, 차단한다.' 이사장의 순간이동이 지직거리며 멈춘다." }
+      - { op: start_combat, enemies: [hyper_chairman] }
+    exits: []
+
+# ─────────────────────────────── 이벤트 ───────────────────────────────
+events:
+  # 빵으로 디미충 유인 (전투 회피 루트)
+  - id: feed_dimichung
+    trigger: { type: use_item, item: code_bread, target: cafeteria.objects.dimichung }
+    condition: "not flag('battery_taken')"
+    check: { stat: 눈치, dc: 10 }
+    success:
+      - { op: remove_item, item: code_bread }
+      - { op: give_item, item: laptop_battery }
+      - { op: set_flag, flag: battery_taken, value: true }
+      - { op: narrate_hint, text: "디미충이 빵에 정신 팔린 사이 배터리를 빼냈다." }
+    failure:
+      - { op: remove_item, item: code_bread }
+      - { op: narrate_hint, text: "디미충은 빵을 한입에 삼키고 더 달라는 듯 노려본다." }
+      - { op: start_combat, enemies: [dimichung] }
+
+  # 노트북 조각 전달 → 계단 봉인 해제
+  - id: deliver_battery
+    trigger: { type: use_item, item: laptop_battery, target: gym.objects.repair_bench }
+    actions:
+      - { op: remove_item, item: laptop_battery }
+      - { op: add_var, var: laptop_pieces, value: 1 }
+      - { op: fixed_text, text: "사이버 민모: '배터리 확인. 전원이 들어온다... 오랜만이군.'" }
+  - id: deliver_keyboard
+    trigger: { type: use_item, item: laptop_keyboard, target: gym.objects.repair_bench }
+    actions:
+      - { op: remove_item, item: laptop_keyboard }
+      - { op: add_var, var: laptop_pieces, value: 1 }
+      - { op: fixed_text, text: "사이버 민모: '키보드 확인. Esc 키가 닳아 있는 건 못 본 걸로 해.'" }
+  - id: deliver_mainboard
+    trigger: { type: use_item, item: laptop_mainboard, target: gym.objects.repair_bench }
+    actions:
+      - { op: remove_item, item: laptop_mainboard }
+      - { op: add_var, var: laptop_pieces, value: 1 }
+      - { op: fixed_text, text: "사이버 민모: '메인보드 확인. 뿌리는... 일단 방열판이라고 치자.'" }
+  - id: deliver_screen
+    trigger: { type: use_item, item: laptop_screen, target: gym.objects.repair_bench }
+    actions:
+      - { op: remove_item, item: laptop_screen }
+      - { op: add_var, var: laptop_pieces, value: 1 }
+      - { op: fixed_text, text: "사이버 민모: '화면 확인. 드디어 내 얼굴이 제대로 보이는군.'" }
+
+  - id: unseal_floor_2
+    trigger: { type: condition }
+    condition: "var('laptop_pieces') >= 1"
+    actions:
+      - { op: narrate_hint, text: "중앙 계단 쪽에서 콘크리트 갈라지는 소리가 난다. 2층 봉인이 풀렸다." }
+  - id: unseal_floor_3
+    trigger: { type: condition }
+    condition: "var('laptop_pieces') >= 2"
+    actions:
+      - { op: narrate_hint, text: "3층 봉인이 풀렸다." }
+  - id: unseal_floor_4
+    trigger: { type: condition }
+    condition: "var('laptop_pieces') >= 3"
+    actions:
+      - { op: narrate_hint, text: "4층 봉인이 풀렸다. 사이버 민모: '마지막 조각은 4층 어딘가에 있어.'" }
+  - id: laptop_repaired
+    trigger: { type: condition }
+    condition: "var('laptop_pieces') >= 4"
+    actions:
+      - { op: set_flag, flag: laptop_repaired, value: true }
+      - { op: fixed_text, text: "사이버 민모: '노트북 복구 완료. 이사장의 초능력, 지금부터 내가 막는다. 옥상으로 가.'" }
+
+  # 3층 첫 진입 시 이사장의 순간이동 습격
+  - id: chairman_ambush
+    trigger: { type: enter_scene, scene: stairs_3 }
+    condition: "not flag('ambush_done')"
+    check: { stat: 눈치, dc: 14 }
+    success:
+      - { op: set_flag, flag: ambush_done, value: true }
+      - { op: fixed_text, text: "공기가 찢어지며 하이퍼 이사장이 나타났다. 골프채가 머리 위를 스쳤지만 간신히 피했다. 이사장은 웃으며 사라졌다." }
+    failure:
+      - { op: set_flag, flag: ambush_done, value: true }
+      - { op: add_resource, resource: hp, value: "-1d6" }
+      - { op: fixed_text, text: "하이퍼 이사장의 풀스윙! 정신을 차려 보니 1층 계단참이다." }
+      - { op: move_party, scene: stairs_1 }
+
+# ─────────────────────────────── 적 ───────────────────────────────
+enemies:
+  dimichung:
+    name: 거대 변이 디미충
+    hp: 28
+    attack: { dice: "1d8+2" }
+    skills:
+      tail_sweep: { name: 꼬리 휩쓸기, attack: { dice: "1d6", targets: all } }
+    behavior:
+      - { when: "hp < 8", do: flee }
+      - { when: "hp < 18", do: "skill:tail_sweep" }
+      - { default: attack_random }
+    on_defeat:
+      - { op: give_item, item: laptop_battery }
+      - { op: set_flag, flag: battery_taken, value: true }
+
+  man_eating_plant:
+    name: 식인 식물
+    hp: 10
+    attack: { dice: "1d6" }
+    skills:
+      vine_grab:
+        name: 덩굴 휘감기
+        effects:
+          - { op: apply_status, status: entangled, save: { stat: 체력, dc: 12 } }
+    behavior:
+      - { when: "hp < 6", do: "skill:vine_grab" }
+      - { default: attack_random }
+
+  red_hat_cultist:
+    name: 빨간모자단원
+    hp: 8
+    attack: { dice: "1d4" }
+    skills:
+      hat_toss:
+        name: 빨간모자 씌우기
+        effects:
+          - { op: apply_status, status: brainwashed, save: { stat: 눈치, dc: 13 } }
+    behavior:
+      - { when: "hp < 4", do: "skill:hat_toss" }
+      - { default: attack_random }
+
+  hyper_chairman:
+    name: 하이퍼 이사장
+    hp: "30 + 8 * party_size()"
+    attack: { dice: "2d6" }
+    skills:
+      concrete_pour:
+        name: 공구리
+        effects:
+          - { op: apply_status, status: concreted, save: { stat: 체력, dc: 14 } }
+      golf_swing:
+        name: 풀스윙
+        attack: { dice: "2d8", targets: single }
+    behavior:
+      - { when: "hp < 15", do: "skill:golf_swing" }
+      - { when: "hp < 30", do: "skill:concrete_pour" }
+      - { default: attack_random }
+    on_defeat:
+      - { op: set_flag, flag: chairman_defeated, value: true }
+
+# ─────────────────────────────── 엔딩 (위에서부터 우선) ───────────────────────────────
+endings:
+  - id: back_to_weekend
+    title: 주말이 돌아왔다
+    condition: "flag('chairman_defeated')"
+    text: >-
+      이사장의 골프채가 잔디에 떨어지는 순간, 하늘의 '평일' 글자가 깨져 나갔다.
+      드럼통들이 하나둘 열리고, 모니터 속 사이버 민모가 처음으로 웃었다. 눈을 뜨니 토요일 아침이다.
+  - id: concreted_forever
+    title: 사이버 드럼통 속으로
+    condition: "all_players_down()"
+    text: "정신을 차려 보니 목만 내놓은 채 굳어 있다. 옆 드럼통의 학생이 말한다. '오늘도 평일이에요.'"
+  - id: eternal_weekday
+    title: 영원한 평일
+    condition: "turn_count() >= 150"
+    text: "시간을 너무 오래 끌었다. 달력의 모든 칸이 '평일'로 덮이고, 당신도 네오 디미고의 일부가 되었다."
