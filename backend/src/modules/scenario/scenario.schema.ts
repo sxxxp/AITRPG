@@ -182,6 +182,17 @@ const rulesetSchema = z
       })
       .strict()
       .optional(),
+    combat: z
+      .object({
+        attack_stat: text,
+        attack_dc: int.min(1),
+        damage: dice,
+        damage_bonus_stat: text.optional(),
+        dodge: saveSchema.optional(),
+        flee: saveSchema,
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

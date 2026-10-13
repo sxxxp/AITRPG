@@ -4,6 +4,8 @@ import { SignupPage } from '@/features/auth/pages/SignupPage';
 import { HomePage } from '@/features/home/pages/HomePage';
 import { JoinPage } from '@/features/session/pages/JoinPage';
 import { LobbyPage } from '@/features/session/pages/LobbyPage';
+import { PlayPage } from '@/features/play/pages/PlayPage';
+import { PlaySetupPage } from '@/features/play/pages/PlaySetupPage';
 import { MySessionsPage } from '@/features/session/pages/MySessionsPage';
 import { SessionListPage } from '@/features/session/pages/SessionListPage';
 import { RequireAuth } from '@/shared/auth/RequireAuth';
@@ -42,6 +44,10 @@ export const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
+
+      // 1인 플레이 (로컬 시나리오 + 로컬 LLM)
+      { path: 'play', element: <PlaySetupPage /> },
+      { path: 'play/:gameId', element: <PlayPage /> },
 
       // 미구현 영역: 구현된 화면에서 이동하는 경로만 자리 표시
       { path: 'sessions/:sessionId/play', element: <ComingSoonPage area="플레이" /> },

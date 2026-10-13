@@ -30,6 +30,13 @@ ruleset:
     min_per_stat: 1
     max_per_stat: 5
     allow_custom: true
+  combat:
+    attack_stat: 체력
+    attack_dc: 10
+    damage: "1d6"
+    damage_bonus_stat: 체력
+    dodge: { stat: 눈치, dc: 11 }
+    flee: { stat: 눈치, dc: 12 }
 
 presets:
   web_dev:
@@ -69,12 +76,12 @@ statuses:
   entangled:
     name: 덩굴 속박
     description: "식인 식물의 덩굴이 팔다리를 감았다."
-    duration: 2
+    duration: 1
     restrict_actions: true
   concreted:
     name: 공구리
     description: "사이버 콘크리트에 하반신이 굳어 버렸다."
-    duration: 2
+    duration: 1
     restrict_actions: true
 
 # ─────────────────────────────── AI 서술 가이드 ───────────────────────────────
@@ -592,7 +599,7 @@ enemies:
         effects:
           - { op: apply_status, status: entangled, save: { stat: 체력, dc: 12 } }
     behavior:
-      - { when: "hp < 6", do: "skill:vine_grab" }
+      - { when: "hp < 6 and turn_count() % 2 == 0", do: "skill:vine_grab" }
       - { default: attack_random }
 
   red_hat_cultist:
@@ -610,8 +617,8 @@ enemies:
 
   hyper_chairman:
     name: 하이퍼 이사장
-    hp: "30 + 8 * party_size()"
-    attack: { dice: "2d6" }
+    hp: "20 + 10 * party_size()"
+    attack: { dice: "1d8" }
     skills:
       concrete_pour:
         name: 공구리
@@ -619,10 +626,10 @@ enemies:
           - { op: apply_status, status: concreted, save: { stat: 체력, dc: 14 } }
       golf_swing:
         name: 풀스윙
-        attack: { dice: "2d8", targets: single }
+        attack: { dice: "2d6", targets: single }
     behavior:
-      - { when: "hp < 15", do: "skill:golf_swing" }
-      - { when: "hp < 30", do: "skill:concrete_pour" }
+      - { when: "hp < 10", do: "skill:golf_swing" }
+      - { when: "hp < 20 and turn_count() % 3 == 0", do: "skill:concrete_pour" }
       - { default: attack_random }
     on_defeat:
       - { op: set_flag, flag: chairman_defeated, value: true }

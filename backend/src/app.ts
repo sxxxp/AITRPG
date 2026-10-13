@@ -8,6 +8,7 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { characterRouter } from './modules/character/character.routes.js';
 import { engineRouter } from './modules/engine/engine.routes.js';
 import { logRouter } from './modules/log/log.routes.js';
+import { playRouter } from './modules/play/play.routes.js';
 import { reviewRouter } from './modules/review/review.routes.js';
 import { scenarioRouter } from './modules/scenario/scenario.routes.js';
 import { sessionRouter } from './modules/session/session.routes.js';
@@ -31,6 +32,7 @@ export function createApp() {
   api.use(engineRouter);
   api.use(logRouter);
   api.use(adminRouter);
+  api.use(playRouter);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);

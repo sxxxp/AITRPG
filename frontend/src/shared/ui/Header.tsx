@@ -21,6 +21,7 @@ export function Header() {
             홈
           </NavLink>
           <NavLink to="/sessions">방 목록</NavLink>
+          <NavLink to="/play">1인 플레이</NavLink>
           {user && <NavLink to="/my/sessions">내 세션</NavLink>}
         </nav>
         <div className="user-menu">

@@ -219,6 +219,17 @@ export function checkReferences(s: Scenario): RawIssue[] {
       if (typeof r[key] === 'string') checkExpr(r[key] as string, ['ruleset', 'resources', rid, key]);
     }
   }
+  const combat = s.ruleset.combat;
+  if (combat) {
+    const base: Path = ['ruleset', 'combat'];
+    checkStat(combat.attack_stat, [...base, 'attack_stat']);
+    if (combat.damage_bonus_stat) checkStat(combat.damage_bonus_stat, [...base, 'damage_bonus_stat']);
+    if (combat.dodge) checkStat(combat.dodge.stat, [...base, 'dodge', 'stat']);
+    checkStat(combat.flee.stat, [...base, 'flee', 'stat']);
+  }
+  if (Object.keys(enemies).length > 0 && !s.ruleset.resources.hp) {
+    error(['ruleset', 'resources'], '적이 있으면 전투 피해를 받을 hp 자원이 필요합니다');
+  }
   const cc = s.ruleset.character_creation;
   if (cc && cc.min_per_stat > cc.max_per_stat) error(['ruleset', 'character_creation'], 'min_per_stat 이 max_per_stat 보다 큽니다');
   for (const [pid, preset] of Object.entries(s.presets ?? {})) {
