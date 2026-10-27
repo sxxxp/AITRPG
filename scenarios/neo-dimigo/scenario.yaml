@@ -118,7 +118,7 @@ items:
     effects: []
   laptop_keyboard:
     name: "노트북 조각: 키보드"
-    description: "사감실 금고에 압수품으로 보관되어 있던 키보드. Esc 키만 닳아 있다."
+    description: "사감실 금고에 압수품으로 보관되어 있던 키보드. Alt + Tab 키만 닳아 있다."
     consumable: false
     effects: []
   laptop_mainboard:
@@ -133,7 +133,7 @@ items:
     effects: []
   code_bread:
     name: 코드 베이커리 빵
-    description: "갓 구운 빵. 포장지에 hello world가 찍혀 있다."
+    description: "갓 구운 빵. 포장지에 hello, world!가 찍혀 있다."
     consumable: true
     effects:
       - { op: add_resource, resource: hp, value: "1d6+1" }
@@ -239,11 +239,22 @@ scenes:
       drum_row:
         name: 사이버 드럼통 행렬
         on_examine:
+          condition: "not flag('drum_row_understood')"
+          locked_text: "이미 볼 만큼 봤다. 드럼통은 여전히 웅웅거리고있다."
           check: { stat: 눈치, dc: 12 }
           success:
+            - { op: set_flag, flag: drum_row_understood, value: true }
             - { op: narrate_hint, text: "드럼통마다 '공구리 완료'와 날짜 대신 '평일'이 찍혀 있다. 옥상 쪽에서 골프공 치는 소리가 들린다." }
           failure:
             - { op: narrate_hint, text: "드럼통이 은은하게 웅웅거린다. 오래 보고 있으면 안 될 것 같다." }
+            - { op: add_resource, resource: hp, value: "-1d5" }
+          critical_failure:
+            - { op: narrate_hint, text: "드럼통이 갑자기 울린다. 머리가 띵하다." }
+            - { op: add_resource, resource: hp, value: "-2d10" }
+          critical_success:
+            - { op: set_flag, flag: drum_row_understood, value: true }
+            - { op: add_stat, stat: 눈치, value: 1 }
+            - { op: narrate_hint, text: "드럼통을 유심히 살펴보니 누군가의 흔적이 보인다." }
     exits:
       - { to: new_building, label: 신관 }
       - { to: cafeteria, label: 식당 }
@@ -315,7 +326,7 @@ scenes:
           check: { stat: 눈치, dc: 12 }
           success:
             - { op: set_flag, flag: roll_call_known, value: true }
-            - { op: narrate_hint, text: "근무표 구석의 낙서: '사감님은 매 정각 옥상을 향해 경례하러 자리를 비우심.'" }
+            - { op: narrate_hint, text: "근무표 구석의 낙서: '빨모는 매 정각 옥상을 향해 경례하러 자리를 비우심.'" }
           failure:
             - { op: narrate_hint, text: "'점호'라는 글자만 빽빽하다." }
       warden_safe:
@@ -523,7 +534,7 @@ events:
     actions:
       - { op: remove_item, item: laptop_keyboard }
       - { op: add_var, var: laptop_pieces, value: 1 }
-      - { op: fixed_text, text: "사이버 민모: '키보드 확인. Esc 키가 닳아 있는 건 못 본 걸로 해.'" }
+      - { op: fixed_text, text: "사이버 민모: '키보드 확인. Alt + Tab 키가 닳아 있는 건 못 본 걸로 해.'" }
   - id: deliver_mainboard
     trigger: { type: use_item, item: laptop_mainboard, target: gym.objects.repair_bench }
     actions:

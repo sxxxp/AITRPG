@@ -6,7 +6,7 @@ import { narrate, type NarrationInput } from '../ai/narrator.js';
 import { createProvider, type LlmHealth, type LlmProvider } from '../ai/provider.js';
 import { applyAction, createGame, EngineError, findAction, FREE_ACTION, listActions } from '../engine/engine.js';
 import type { EngineEvent, GameState, PlayerSetup } from '../engine/types.js';
-import { loadScenarioDir } from '../scenario/scenario.loader.js';
+import { ScenarioCatalog } from '../scenario/scenario.loader.js';
 import type { Scenario } from '../scenario/scenario.schema.js';
 
 // 1인 플레이 (테스트 플레이, F-SCN-08 기반). 멀티플레이 세션(F-SES)은 같은 엔진을 Socket 으로 연결할 예정.
@@ -44,7 +44,15 @@ export interface GameView {
   combat: { enemies: { uid: string; name: string; hp: number; maxHp: number }[] } | null;
   actions: { id: string; label: string; group: string }[];
   ending: { id: string; title: string; text: string } | null;
-  debug: { fixedRoll: number | null };
+  debug: {
+    fixedRoll: number | null;
+    flags: Record<string, boolean>;
+    vars: Record<string, number>;
+    /** 시나리오에 등장하는 모든 플래그 (아직 설정되지 않은 것 포함) */
+    knownFlags: string[];
+    scenes: { id: string; name: string }[];
+    items: { id: string; name: string }[];
+  };
 }
 
 interface Game {
@@ -60,7 +68,7 @@ const ACTOR = 'p1';
 const MAX_GAMES = 200;
 
 let provider: LlmProvider | null = createProvider();
-let scenarios: Map<string, Scenario> | null = null;
+const catalog = new ScenarioCatalog(env.scenarioDir);
 const games = new Map<string, Game>();
 let seq = 0;
 const nextId = () => `f${++seq}`;
@@ -70,14 +78,9 @@ export function setProvider(next: LlmProvider | null) {
   provider = next;
 }
 
+/** 파일이 바뀌었으면 다시 읽는다 (서버 재시작 불필요) */
 function getScenarios() {
-  scenarios ??= loadScenarioDir(env.scenarioDir);
-  return scenarios;
-}
-
-export function reloadScenarios() {
-  scenarios = null;
-  return getScenarios();
+  return catalog.all();
 }
 
 function getGame(id: string): Game {
@@ -103,6 +106,22 @@ export function listScenarios() {
 export async function aiStatus(): Promise<LlmHealth & { provider: string; model: string | null }> {
   if (!provider) return { available: false, message: 'LLM 미사용 (LLM_PROVIDER=none)', provider: 'none', model: null };
   return { ...(await provider.health()), provider: provider.name, model: provider.model };
+}
+
+const knownFlagsCache = new WeakMap<Scenario, string[]>();
+
+/** set_flag 와 조건식 flag('...') 에 등장하는 플래그 이름 */
+function knownFlags(sc: Scenario): string[] {
+  let flags = knownFlagsCache.get(sc);
+  if (!flags) {
+    const json = JSON.stringify(sc);
+    const found = new Set<string>();
+    for (const m of json.matchAll(/"flag":"([a-z][a-z0-9_]*)"/g)) found.add(m[1]);
+    for (const m of json.matchAll(/flag\('([a-z][a-z0-9_]*)'\)/g)) found.add(m[1]);
+    flags = [...found].sort();
+    knownFlagsCache.set(sc, flags);
+  }
+  return flags;
 }
 
 function toView(game: Game): GameView {
@@ -133,7 +152,14 @@ function toView(game: Game): GameView {
       : null,
     actions: listActions(sc, state, ACTOR).map((a) => ({ id: a.id, label: a.label, group: a.group })),
     ending: state.ending,
-    debug: { fixedRoll: state.fixedRoll },
+    debug: {
+      fixedRoll: state.fixedRoll,
+      flags: state.flags,
+      vars: state.vars,
+      knownFlags: knownFlags(sc),
+      scenes: Object.entries(sc.scenes).map(([id, s]) => ({ id, name: s.name })),
+      items: Object.entries(sc.items).map(([id, it]) => ({ id, name: it.name })),
+    },
   };
 }
 
@@ -165,6 +191,12 @@ function toFeed(sc: Scenario, events: EngineEvent[]): FeedEntry[] {
       case 'resource':
         if (e.resource === 'hp') out.push({ id: nextId(), type: 'system', text: `${e.actor} HP ${e.delta > 0 ? '+' : ''}${e.delta} → ${e.value}` });
         break;
+      case 'stat': {
+        const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+        const derived = e.maxChanges.map((m) => `최대 ${m.resource.toUpperCase()} ${sign(m.delta)} → ${m.max}`).join(', ');
+        out.push({ id: nextId(), type: 'system', text: `${e.actor} ${e.stat} ${sign(e.delta)} → ${e.value}${derived ? ` (${derived})` : ''}` });
+        break;
+      }
       case 'status':
         out.push({
           id: nextId(),
@@ -179,7 +211,11 @@ function toFeed(sc: Scenario, events: EngineEvent[]): FeedEntry[] {
         out.push({ id: nextId(), type: 'system', text: `이동: ${e.sceneName}` });
         break;
       case 'combat_start':
-        out.push({ id: nextId(), type: 'system', text: `전투 시작: ${e.enemies.join(', ')}` });
+        out.push({
+          id: nextId(),
+          type: 'system',
+          text: `전투 시작: ${e.enemies.join(', ')}${e.resumed.length ? ` (지난 전투의 상처 유지: ${e.resumed.join(', ')})` : ''}`,
+        });
         break;
       case 'attack':
         out.push({
@@ -248,14 +284,67 @@ export function getGameSnapshot(id: string) {
   return { view: toView(game), feed: game.feed };
 }
 
-/** 테스트 플레이 디버그: 주사위 고정 (F-SCN-08) */
-export function setFixedRoll(id: string, value: number | null) {
+export interface DebugPatch {
+  fixedRoll?: number | null;
+  flags?: Record<string, boolean>;
+  vars?: Record<string, number>;
+  /** 장면 순간이동 (on_enter·진입 이벤트는 실행하지 않음) */
+  sceneId?: string;
+  giveItem?: string;
+  hp?: number;
+}
+
+const FLAG_ID = /^[a-z][a-z0-9_]*$/;
+
+/** 테스트 플레이 디버그 (F-SCN-08, BE-SCN-14): 주사위 고정, 플래그/변수/HP 설정, 순간이동, 아이템 지급 */
+export function applyDebug(id: string, patch: DebugPatch): { view: GameView; entry: FeedEntry | null } {
   const game = getGame(id);
-  if (value !== null && (!Number.isInteger(value) || value < 1 || value > 20)) {
-    throw new HttpError(422, 'INVALID_ROLL', '주사위 값은 1~20 이어야 합니다.');
+  if (game.busy) throw new HttpError(409, 'BUSY', '이전 행동을 처리하는 중입니다.');
+  const sc = game.scenario;
+  const state = structuredClone(game.state);
+  const c = state.party[0];
+  const notes: string[] = [];
+
+  if (patch.fixedRoll !== undefined) {
+    const v = patch.fixedRoll;
+    if (v !== null && (!Number.isInteger(v) || v < 1 || v > 20)) throw new HttpError(422, 'INVALID_ROLL', '주사위 값은 1~20 이어야 합니다.');
+    state.fixedRoll = v;
+    notes.push(v === null ? '주사위 무작위' : `주사위 고정 ${v}`);
   }
-  game.state = { ...game.state, fixedRoll: value };
-  return toView(game);
+  for (const [flag, value] of Object.entries(patch.flags ?? {})) {
+    if (!FLAG_ID.test(flag) || typeof value !== 'boolean') throw new HttpError(422, 'INVALID_FLAG', `잘못된 플래그: ${flag}`);
+    state.flags[flag] = value;
+    notes.push(`${flag}=${value}`);
+  }
+  for (const [name, value] of Object.entries(patch.vars ?? {})) {
+    if (!(name in (sc.variables ?? {})) || !Number.isInteger(value)) throw new HttpError(422, 'INVALID_VAR', `잘못된 변수: ${name}`);
+    state.vars[name] = value;
+    notes.push(`${name}=${value}`);
+  }
+  if (patch.sceneId !== undefined) {
+    if (!sc.scenes[patch.sceneId]) throw new HttpError(422, 'INVALID_SCENE', `존재하지 않는 장면: ${patch.sceneId}`);
+    state.prevSceneId = state.sceneId;
+    state.sceneId = patch.sceneId;
+    state.combat = null;
+    notes.push(`순간이동 → ${sc.scenes[patch.sceneId].name}`);
+  }
+  if (patch.giveItem !== undefined) {
+    if (!sc.items[patch.giveItem]) throw new HttpError(422, 'INVALID_ITEM', `존재하지 않는 아이템: ${patch.giveItem}`);
+    c.inventory[patch.giveItem] = (c.inventory[patch.giveItem] ?? 0) + 1;
+    notes.push(`아이템 지급: ${sc.items[patch.giveItem].name}`);
+  }
+  if (patch.hp !== undefined && 'hp' in c.resources) {
+    if (!Number.isInteger(patch.hp)) throw new HttpError(422, 'INVALID_HP', 'HP 는 정수여야 합니다.');
+    c.resources.hp = Math.min(c.resourceMax.hp, Math.max(c.resourceMin.hp, patch.hp));
+    c.down = c.resources.hp <= c.resourceMin.hp;
+    notes.push(`HP ${c.resources.hp}`);
+  }
+
+  game.state = state;
+  game.updatedAt = Date.now();
+  const entry: FeedEntry | null = notes.length ? { id: nextId(), type: 'system', text: `🔧 디버그: ${notes.join(', ')}` } : null;
+  if (entry) game.feed.push(entry);
+  return { view: toView(game), entry };
 }
 
 export type ActInput = { actionId: string } | { text: string };

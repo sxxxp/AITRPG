@@ -35,6 +35,7 @@ export const opSchema = z.discriminatedUnion('op', [
   op('remove_item', { item: id, quantity: int.min(1).optional() }),
   op('add_resource', { resource: id, value: amount }),
   op('set_resource', { resource: id, value: amount }),
+  op('add_stat', { stat: text, value: int }),
   op('set_flag', { flag: id, value: z.boolean() }),
   op('add_var', { var: id, value: int }),
   op('move_party', { scene: id }),
@@ -52,7 +53,10 @@ export const OP_NAMES = opSchema.options.map((o) => o.shape.op.value);
 
 const ops = z.array(opSchema);
 
-/** 판정 없는 actions, 또는 check + success + failure */
+/**
+ * 판정 없는 actions, 또는 check + success + failure.
+ * critical_success / critical_failure 는 선택: 주사위가 ruleset.critical 값이면 success / failure 대신 실행
+ */
 const branchShape = {
   condition: expr.optional(),
   locked_text: text.optional(),
@@ -60,11 +64,25 @@ const branchShape = {
   check: checkSchema.optional(),
   success: ops.optional(),
   failure: ops.optional(),
+  critical_success: ops.optional(),
+  critical_failure: ops.optional(),
 };
 
-type Branch = { actions?: unknown; check?: unknown; success?: unknown; failure?: unknown };
+type Branch = {
+  actions?: unknown;
+  check?: unknown;
+  success?: unknown;
+  failure?: unknown;
+  critical_success?: unknown;
+  critical_failure?: unknown;
+};
 
 function refineBranch(v: Branch, ctx: z.RefinementCtx) {
+  if (v.check === undefined) {
+    for (const key of ['critical_success', 'critical_failure'] as const) {
+      if (v[key] !== undefined) ctx.addIssue({ code: 'custom', path: [key], message: `${key} 는 check 와 함께 써야 합니다` });
+    }
+  }
   if (v.check !== undefined) {
     if (v.success === undefined) ctx.addIssue({ code: 'custom', path: ['success'], message: 'check 가 있으면 success 가 필요합니다' });
     if (v.failure === undefined) ctx.addIssue({ code: 'custom', path: ['failure'], message: 'check 가 있으면 failure 가 필요합니다' });

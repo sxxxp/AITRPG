@@ -53,6 +53,9 @@ function describeFacts(input: NarrationInput) {
         facts.push(`${e.actor}: ${e.delta > 0 ? up : down}`);
         break;
       }
+      case 'stat':
+        facts.push(`${e.actor}의 ${e.stat}이(가) ${e.delta > 0 ? '올랐다' : '떨어졌다'}.`);
+        break;
       case 'status':
         facts.push(
           e.change === 'applied'
@@ -70,6 +73,7 @@ function describeFacts(input: NarrationInput) {
         break;
       case 'combat_start':
         facts.push(`전투가 시작되었다: ${e.enemies.join(', ')}`);
+        if (e.resumed.length) facts.push(`${e.resumed.join(', ')}은(는) 지난 전투의 상처를 그대로 지닌 채 다시 나타났다.`);
         break;
       case 'attack':
         facts.push(

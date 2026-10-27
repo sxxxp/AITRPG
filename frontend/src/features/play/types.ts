@@ -60,7 +60,14 @@ export interface GameView {
   combat: { enemies: { uid: string; name: string; hp: number; maxHp: number }[] } | null;
   actions: { id: string; label: string; group: string }[];
   ending: { id: string; title: string; text: string } | null;
-  debug: { fixedRoll: number | null };
+  debug: {
+    fixedRoll: number | null;
+    flags: Record<string, boolean>;
+    vars: Record<string, number>;
+    knownFlags: string[];
+    scenes: { id: string; name: string }[];
+    items: { id: string; name: string }[];
+  };
 }
 
 export interface GameSnapshot {
@@ -77,3 +84,13 @@ export type StreamEvent =
   | { type: 'error'; message: string };
 
 export type ActInput = { actionId: string } | { text: string };
+
+/** 테스트 플레이 디버그 변경 (BE-SCN-14) */
+export interface DebugPatch {
+  fixedRoll?: number | null;
+  flags?: Record<string, boolean>;
+  vars?: Record<string, number>;
+  sceneId?: string;
+  giveItem?: string;
+  hp?: number;
+}

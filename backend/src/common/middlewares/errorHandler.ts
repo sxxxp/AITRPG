@@ -21,6 +21,12 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(err.status).json({ error: { code: err.code, message: err.message, details: err.details } });
     return;
   }
+  // body-parser 오류 (잘못된 JSON, 크기 초과 등)
+  if (typeof err?.status === 'number' && err.status >= 400 && err.status < 500) {
+    const message = err.type === 'entity.too.large' ? '요청 본문이 너무 큽니다.' : '요청 본문을 읽을 수 없습니다.';
+    res.status(err.status).json({ error: { code: 'BAD_REQUEST', message } });
+    return;
+  }
   console.error(err);
   res.status(500).json({ error: { code: 'INTERNAL', message: '서버 오류가 발생했습니다.' } });
 };

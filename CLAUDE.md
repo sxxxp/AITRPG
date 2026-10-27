@@ -9,9 +9,13 @@
 - 구현은 우선순위 P0부터. 요청받지 않은 P1/P2 기능은 만들지 않는다.
 
 ## 구조
-- `frontend/` React + Vite + TS. `shared/`(공통) + `features/<영역>/`. 현재 공통·홈·계정(로그인/회원가입)·세션 P0 구현.
+- `frontend/` React + Vite + TS. `shared/`(공통) + `features/<영역>/`. 현재 공통·홈·계정(로그인/회원가입)·세션·1인 플레이·시나리오 제작(`editor/`) P0 구현.
   - `npm run dev`는 기본 목 모드(`.env.development`의 `VITE_USE_MOCK=true`). 데모 계정 `demo@wtg.dev / demo1234`.
-- `backend/` Express + Socket.IO + TS. `src/modules/<영역>/` (명세 영역과 1:1). 구현됨: 시나리오 검증(BE-SCN-10), 게임 엔진(`engine/`), AI(`ai/`), 1인 플레이 API(`play/`, `/api/v1/play`). 나머지 API는 501 스텁.
+  - 목 모드에서 목 핸들러가 없는 요청은 실제 백엔드로 전달된다 (`mocks/http.ts`). 백엔드에 구현된 API(시나리오 등)는 목 모드에서도 실제로 동작.
+  - Monaco 편집기는 `features/editor/components/CodeEditor.tsx` 에서만 lazy 로드 (메인 번들 분리 유지).
+  - 블록 편집기(Blockly 11.2.2): `features/editor/blocks/`. 변환은 `convert.ts`(Blockly 비의존 순수 함수)가 담당하고, 블록 필드/입력 이름은 `definitions.ts` 와 반드시 일치해야 한다. 시나리오 포맷이 바뀌면 convert/definitions 도 함께 수정하고 왕복(시나리오→블록→시나리오) 결과가 같은지 확인할 것. 블록으로 표현하지 않는 필드는 블록 `data` 에 보관해 손실을 막는다.
+- `backend/` Express + Socket.IO + TS. `src/modules/<영역>/` (명세 영역과 1:1). 구현됨: 시나리오 제작 API(`scenario/`, 파일 저장소 `scenario.store.ts`), 게임 엔진(`engine/`), AI(`ai/`), 1인 플레이 API(`play/`, `/api/v1/play`). 나머지 API는 501 스텁.
+  - 시나리오 저장: `scenarios/<id>/scenario.yaml` + `meta.json`, 이전 버전 `.versions/`, 삭제 `.trash/` (DB 도입 전, 인증 없음).
   - 엔진은 I/O 없는 순수 함수 (`createGame` / `listActions` / `applyAction`). 상태 변경은 엔진만, AI는 서술만.
   - LLM 기본값: Ollama + `gemma3:4b` (사용자 GPU: RTX 2060 6GB). `LLM_PROVIDER=none`이면 고정 문장으로 진행.
 - `scenarios/` 시나리오 파일. 포맷은 기능명세서 §6, 스키마는 `backend/src/modules/scenario/scenario.schema.ts` (둘은 항상 함께 수정).

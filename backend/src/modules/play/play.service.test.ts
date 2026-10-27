@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import { env } from '../../config/env.js';
 import { createProvider } from '../ai/provider.js';
-import { act, setFixedRoll, setProvider, startGame, type StreamEvent } from './play.service.js';
+import { act, applyDebug, setProvider, startGame, type StreamEvent } from './play.service.js';
 
 /**
  * Ollama /api/chat 를 흉내 내는 가짜 서버.
@@ -68,7 +68,7 @@ async function collect(gen: AsyncGenerator<StreamEvent>) {
 
 const newGame = () => {
   const { view } = startGame('neo-dimigo', { name: '리아', presetId: 'web_dev' });
-  setFixedRoll(view.gameId, 20);
+  applyDebug(view.gameId, { fixedRoll: 20 });
   return view.gameId;
 };
 
@@ -116,6 +116,27 @@ describe('1인 플레이 + LLM 연동 (가짜 Ollama)', () => {
     } finally {
       setProvider(createProvider({ ...env.llm, provider: 'ollama', baseUrl, model: 'fake:4b', think: false }));
     }
+  });
+
+  it('디버그로 플래그·변수·HP·장면·아이템을 바꾸고 기록을 남긴다', () => {
+    const id = newGame();
+    const { view, entry } = applyDebug(id, {
+      flags: { laptop_repaired: true },
+      vars: { laptop_pieces: 3 },
+      sceneId: 'stairs_4',
+      giveItem: 'code_bread',
+      hp: 3,
+    });
+    assert.equal(view.debug.flags.laptop_repaired, true);
+    assert.equal(view.debug.vars.laptop_pieces, 3);
+    assert.equal(view.scene.id, 'stairs_4');
+    assert.equal(view.character.hp, 3);
+    assert.ok(view.inventory.some((i) => i.id === 'code_bread'));
+    assert.ok(view.actions.some((a) => a.label.includes('옥상')), '옥상 출구가 열려 있어야 함');
+    assert.ok(view.debug.knownFlags.includes('battery_taken'));
+    assert.match(entry!.text, /디버그/);
+    assert.throws(() => applyDebug(id, { sceneId: 'nowhere' }), /존재하지 않는 장면/);
+    assert.throws(() => applyDebug(id, { vars: { undeclared: 1 } }), /잘못된 변수/);
   });
 
   it('후보에 없는 입력은 상태를 바꾸지 않는 자유 행동이 된다', async () => {

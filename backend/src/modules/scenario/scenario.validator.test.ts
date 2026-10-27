@@ -128,6 +128,31 @@ describe('validateScenarioSource', () => {
     assert.ok(isolatedMessages.some((m) => m.includes('도달할 수 없는 장면입니다: room')));
   });
 
+  it('대성공/대실패 갈래는 check 와 함께일 때만 허용하고, 그 안의 참조도 검사한다', () => {
+    const ok = MINIMAL.replace(
+      '          failure:\n            - { op: narrate_hint, text: 열리지 않는다. }',
+      '          failure:\n            - { op: narrate_hint, text: 열리지 않는다. }\n          critical_failure:\n            - { op: give_item, item: kye }',
+    );
+    const okResult = validateScenarioSource(ok);
+    assert.ok(errors(okResult.issues).some((i) => i.path === 'scenes.hall.objects.box.on_interact.critical_failure.0.item'));
+
+    const noCheck = MINIMAL.replace(
+      '    actions:\n      - { op: set_flag, flag: door_open, value: true }',
+      '    actions:\n      - { op: set_flag, flag: door_open, value: true }\n    critical_success:\n      - { op: narrate_hint, text: 와 }',
+    );
+    const messages = errors(validateScenarioSource(noCheck).issues).map((i) => i.message);
+    assert.ok(messages.includes('critical_success 는 check 와 함께 써야 합니다'));
+  });
+
+  it('add_stat 의 스탯 이름을 검사한다', () => {
+    const source = MINIMAL.replace('            - { op: give_item, item: key }', '            - { op: give_item, item: key }\n            - { op: add_stat, stat: 눈치, value: 1 }');
+    const issue = errors(validateScenarioSource(source).issues)[0];
+    assert.equal(issue?.message, '룰셋에 없는 스탯: 눈치');
+    assert.equal(issue?.path, 'scenes.hall.objects.box.on_interact.success.1.stat');
+    const ok = MINIMAL.replace('            - { op: give_item, item: key }', '            - { op: give_item, item: key }\n            - { op: add_stat, stat: 지능, value: 1 }');
+    assert.deepEqual(errors(validateScenarioSource(ok).issues), []);
+  });
+
   it('경고만 있으면 valid 다', () => {
     const source = MINIMAL.replace('            - { op: give_item, item: key }', '            - { op: narrate_hint, text: 비었다. }');
     const result = validateScenarioSource(source);

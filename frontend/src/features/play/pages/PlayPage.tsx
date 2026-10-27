@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ErrorView } from '@/shared/ui/Feedback';
 import { PageSpinner } from '@/shared/ui/Spinner';
@@ -8,8 +8,9 @@ import { playApi, playKeys } from '../api';
 import { ActionPanel } from '../components/ActionPanel';
 import { AiStatusBadge } from '../components/AiStatusBadge';
 import { CharacterSheet } from '../components/CharacterSheet';
-import { Feed } from '../components/Feed';
-import type { ActInput, FeedEntry, GameView, StreamEvent } from '../types';
+import { DebugPanel } from '../components/DebugPanel';
+import { Feed, type FeedItem } from '../components/Feed';
+import type { ActInput, DebugPatch, FeedEntry, GameView, StreamEvent } from '../types';
 
 // 1인 플레이 화면 (FE-PLY-01/02/04/05 의 1인용 축소판)
 export function PlayPage() {
@@ -19,7 +20,14 @@ export function PlayPage() {
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [streaming, setStreaming] = useState<{ id: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [typing, setTyping] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // 스트리밍 중인 서술은 최종본과 같은 id 로 이어 붙여, 최종본이 와도 타자 효과가 처음부터 다시 시작되지 않게 한다
+  const items = useMemo<FeedItem[]>(
+    () => (streaming ? [...feed, { id: streaming.id, type: 'narration', text: streaming.text, fallback: false, streaming: true }] : feed),
+    [feed, streaming],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -73,9 +81,11 @@ export function PlayPage() {
     }
   };
 
-  const changeFixedRoll = async (value: string) => {
+  const applyDebug = async (patch: DebugPatch) => {
     try {
-      setView(await playApi.setFixedRoll(gameId, value === '' ? null : Number(value)));
+      const { view: next, entry } = await playApi.debug(gameId, patch);
+      setView(next);
+      if (entry) setFeed((f) => [...f, entry]);
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -108,8 +118,8 @@ export function PlayPage() {
 
       <div className="play-grid">
         <div className="play-main card">
-          <Feed entries={feed} streaming={streaming} />
-          {view.ending ? (
+          <Feed items={items} onTypingChange={setTyping} />
+          {view.ending && !typing ? (
             <div className="row">
               <Link to="/play" className="btn btn-primary">
                 새로 시작
@@ -117,8 +127,8 @@ export function PlayPage() {
             </div>
           ) : (
             <ActionPanel
-              actions={view.actions}
-              busy={busy}
+              actions={view.ending ? [] : view.actions}
+              busy={busy || typing}
               aiAvailable={!!aiStatus.data?.available}
               onAction={(actionId) => void send({ actionId })}
               onText={(text) => void send({ text })}
@@ -128,18 +138,7 @@ export function PlayPage() {
 
         <aside className="play-side">
           <CharacterSheet view={view} />
-          <details className="card debug-panel">
-            <summary>테스트 도구</summary>
-            <label className="field">
-              <span className="label">주사위 고정 (d20)</span>
-              <select value={view.debug.fixedRoll ?? ''} onChange={(e) => void changeFixedRoll(e.target.value)}>
-                <option value="">무작위</option>
-                <option value="20">20 (대성공)</option>
-                <option value="10">10</option>
-                <option value="1">1 (대실패)</option>
-              </select>
-            </label>
-          </details>
+          <DebugPanel view={view} disabled={busy} onPatch={(patch) => void applyDebug(patch)} />
         </aside>
       </div>
     </div>

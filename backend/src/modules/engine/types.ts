@@ -42,7 +42,13 @@ export interface GameState extends RngHolder {
   flags: Record<string, boolean>;
   vars: Record<string, number>;
   party: CharacterState[];
-  combat: { enemies: EnemyState[] } | null;
+  /** sceneId: 전투가 시작된 장면 (재대면 시 남은 HP를 찾는 키) */
+  combat: { sceneId: string; enemies: EnemyState[] } | null;
+  /**
+   * 처치하지 못하고 헤어진 적의 남은 HP. 키: `${장면}:${적 ID}`, 값: 남은 HP 목록(같은 적 여러 마리).
+   * 같은 장면에서 같은 적과 다시 전투가 시작되면 이 값으로 시작한다.
+   */
+  woundedEnemies: Record<string, number[]>;
   /** condition 트리거 이벤트는 1회만 발동 */
   firedEvents: string[];
   revealedSecrets: string[];
@@ -90,10 +96,20 @@ export type EngineEvent =
   | { type: 'locked'; text: string }
   | { type: 'item'; actor: string; item: string; name: string; delta: number }
   | { type: 'resource'; actor: string; resource: string; delta: number; value: number }
+  /** maxChanges: 이 스탯에 연결된 자원 최대치 변화 (예: 최대 HP = 10 + 체력) */
+  | {
+      type: 'stat';
+      actor: string;
+      stat: string;
+      delta: number;
+      value: number;
+      maxChanges: { resource: string; delta: number; max: number }[];
+    }
   | { type: 'status'; actor: string; status: string; name: string; change: 'applied' | 'resisted' | 'removed' | 'expired' }
   | { type: 'restricted'; actor: string; status: string }
   | { type: 'move'; from: string; to: string; sceneName: string }
-  | { type: 'combat_start'; enemies: string[] }
+  /** resumed: 지난 전투의 상처를 그대로 가진 적 이름 */
+  | { type: 'combat_start'; enemies: string[]; resumed: string[] }
   | { type: 'attack'; attacker: string; target: string; hit: boolean; damage: number; skill: string | null }
   | { type: 'enemy_gone'; name: string; reason: 'defeated' | 'fled' }
   | { type: 'combat_end'; reason: 'victory' | 'escaped' }

@@ -42,6 +42,7 @@ export function ActionPanel({ actions, busy, aiAvailable, onAction, onText }: Pr
           {busy ? '진행 중…' : '행동'}
         </button>
       </form>
+      {busy && <p className="muted small">출력 중에는 기록 영역을 클릭하면 바로 표시됩니다.</p>}
 
       {groups.map(({ group, items }) => (
         <div key={group} className="action-group">

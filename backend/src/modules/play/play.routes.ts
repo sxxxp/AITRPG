@@ -1,6 +1,15 @@
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import { HttpError } from '../../common/middlewares/errorHandler.js';
-import { act, aiStatus, getGameSnapshot, listScenarios, setFixedRoll, startGame, type ActInput } from './play.service.js';
+import {
+  act,
+  aiStatus,
+  applyDebug,
+  getGameSnapshot,
+  listScenarios,
+  startGame,
+  type ActInput,
+  type DebugPatch,
+} from './play.service.js';
 
 // 1인 플레이 API. TODO: 인증 미들웨어가 생기면 로그인 사용자로 제한
 export const playRouter = Router();
@@ -20,21 +29,34 @@ playRouter.get(
   }),
 );
 
-playRouter.post('/play/games', (req, res) => {
-  const { scenarioId, player } = req.body ?? {};
+function startFromBody(scenarioId: unknown, player: { name?: unknown; presetId?: unknown; stats?: unknown } | undefined) {
   if (typeof scenarioId !== 'string' || typeof player?.name !== 'string') {
     throw new HttpError(400, 'INVALID_BODY', 'scenarioId 와 player.name 이 필요합니다.');
   }
-  res.status(201).json(startGame(scenarioId, { name: player.name, presetId: player.presetId, stats: player.stats }));
+  return startGame(scenarioId, {
+    name: player.name,
+    presetId: typeof player.presetId === 'string' ? player.presetId : undefined,
+    stats: player.stats as Record<string, number> | undefined,
+  });
+}
+
+playRouter.post('/play/games', (req, res) => {
+  res.status(201).json(startFromBody(req.body?.scenarioId, req.body?.player));
+});
+
+// BE-SCN-13: 에디터에서 테스트 플레이 시작 (1인 플레이 게임을 만든다)
+playRouter.post('/scenarios/:scenarioId/test-sessions', (req, res) => {
+  res.status(201).json(startFromBody(req.params.scenarioId, req.body?.player));
 });
 
 playRouter.get('/play/games/:gameId', (req, res) => {
   res.json(getGameSnapshot(req.params.gameId));
 });
 
+// BE-SCN-14 (1인 테스트 플레이용). 응답: { view, entry }
 playRouter.patch('/play/games/:gameId/debug', (req, res) => {
-  const value = req.body?.fixedRoll;
-  res.json(setFixedRoll(req.params.gameId, value === null || value === undefined ? null : Number(value)));
+  const body = (req.body ?? {}) as DebugPatch;
+  res.json(applyDebug(req.params.gameId, body));
 });
 
 /** 응답: NDJSON 스트림 (한 줄에 StreamEvent 하나) */

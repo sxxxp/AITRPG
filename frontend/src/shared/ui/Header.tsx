@@ -23,6 +23,7 @@ export function Header() {
           <NavLink to="/sessions">방 목록</NavLink>
           <NavLink to="/play">1인 플레이</NavLink>
           {user && <NavLink to="/my/sessions">내 세션</NavLink>}
+          {user && <NavLink to="/my/scenarios">내 시나리오</NavLink>}
         </nav>
         <div className="user-menu">
           {status === 'unknown' ? null : user ? (

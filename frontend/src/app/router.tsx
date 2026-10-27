@@ -1,6 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { SignupPage } from '@/features/auth/pages/SignupPage';
+import { MyScenariosPage } from '@/features/editor/pages/MyScenariosPage';
+import { ScenarioEditorPage } from '@/features/editor/pages/ScenarioEditorPage';
 import { HomePage } from '@/features/home/pages/HomePage';
 import { JoinPage } from '@/features/session/pages/JoinPage';
 import { LobbyPage } from '@/features/session/pages/LobbyPage';
@@ -41,6 +43,32 @@ export const router = createBrowserRouter([
         element: (
           <RequireAuth>
             <MySessionsPage />
+          </RequireAuth>
+        ),
+      },
+
+      // 시나리오 제작 (FE-EDT)
+      {
+        path: 'my/scenarios',
+        element: (
+          <RequireAuth>
+            <MyScenariosPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'scenarios/new',
+        element: (
+          <RequireAuth>
+            <ScenarioEditorPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'scenarios/:scenarioId/edit',
+        element: (
+          <RequireAuth>
+            <ScenarioEditorPage />
           </RequireAuth>
         ),
       },

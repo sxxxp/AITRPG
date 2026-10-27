@@ -1,4 +1,4 @@
-import { AxiosError, type AxiosAdapter, type AxiosResponse } from 'axios';
+import axios, { AxiosError, type AxiosAdapter, type AxiosResponse } from 'axios';
 
 export class HttpError extends Error {
   constructor(
@@ -33,12 +33,16 @@ export function route(method: string, path: string, handler: Handler) {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** axios 어댑터: 실제 네트워크 대신 등록된 목 핸들러로 응답 */
-export const mockAdapter: AxiosAdapter = async (config) => {
-  await delay(120 + Math.random() * 200);
+// 목 핸들러가 없는 요청은 실제 백엔드로 보낸다 (구현된 백엔드 API 는 목 모드에서도 그대로 사용)
+const realAdapter = axios.getAdapter(axios.defaults.adapter);
 
+/** axios 어댑터: 등록된 목 핸들러가 있으면 그것으로, 없으면 실제 네트워크로 응답 */
+export const mockAdapter: AxiosAdapter = async (config) => {
   const method = (config.method ?? 'get').toUpperCase();
   const url = new URL(config.url ?? '/', 'http://mock.local');
+  if (!routes.some((r) => r.method === method && r.regex.test(url.pathname))) return realAdapter(config);
+
+  await delay(120 + Math.random() * 200);
   const query = url.searchParams;
   for (const [k, v] of Object.entries(config.params ?? {})) {
     if (v !== undefined && v !== null) query.set(k, String(v));
@@ -47,8 +51,8 @@ export const mockAdapter: AxiosAdapter = async (config) => {
   const auth = String(config.headers.get('Authorization') ?? '');
   const userId = auth.startsWith('Bearer mock.') ? auth.slice('Bearer mock.'.length) : null;
 
-  let status = 501;
-  let data: unknown = { error: { code: 'NOT_IMPLEMENTED', message: `목 API 미구현: ${method} ${url.pathname}` } };
+  let status = 500;
+  let data: unknown = null;
 
   for (const r of routes) {
     if (r.method !== method) continue;

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ErrorView } from '@/shared/ui/Feedback';
 import { PageSpinner } from '@/shared/ui/Spinner';
 import { playApi, playKeys } from '../api';
@@ -9,8 +9,11 @@ import { AiStatusBadge } from '../components/AiStatusBadge';
 // 1인 플레이 시작: 시나리오와 프리셋 캐릭터 선택
 export function PlaySetupPage() {
   const navigate = useNavigate();
-  const scenarios = useQuery({ queryKey: playKeys.scenarios, queryFn: playApi.scenarios });
-  const [scenarioId, setScenarioId] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  // 에디터에서 방금 저장한 시나리오도 보이도록 항상 새로 조회
+  const scenarios = useQuery({ queryKey: playKeys.scenarios, queryFn: playApi.scenarios, staleTime: 0 });
+  // 에디터의 '테스트 플레이'는 ?scenario=<id> 로 들어온다
+  const [scenarioId, setScenarioId] = useState<string | null>(params.get('scenario'));
   const [presetId, setPresetId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);

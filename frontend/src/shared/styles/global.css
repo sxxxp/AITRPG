@@ -918,3 +918,143 @@ input[type='radio'] {
 .debug-panel .field {
   margin-top: 8px;
 }
+
+/* ── 시나리오 제작 ── */
+.editor-actions {
+  justify-content: flex-end;
+}
+.editor-actions select {
+  width: auto;
+}
+.note-input {
+  width: 200px;
+  max-width: 100%;
+}
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+  margin-top: 12px;
+}
+@media (max-width: 960px) {
+  .editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.editor-main {
+  padding: 0;
+  overflow: hidden;
+}
+.code-editor {
+  height: calc(100vh - 260px);
+  min-height: 420px;
+}
+.validation-panel {
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+}
+.issue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.issue {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 0.85rem;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 0;
+  border-left: 3px solid var(--warning);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+button.issue:not(:disabled) {
+  cursor: pointer;
+}
+button.issue:not(:disabled):hover {
+  background: var(--border);
+}
+.issue--error {
+  border-left-color: var(--danger);
+}
+.issue__line {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.issue__path {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+.btn.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── 테스트 도구 ── */
+.debug-panel__body {
+  margin-top: 8px;
+}
+.debug-row {
+  flex-wrap: nowrap;
+}
+.debug-row select,
+.debug-row input {
+  flex: 1;
+  min-width: 0;
+}
+.debug-key {
+  min-width: 7rem;
+  font-size: 0.8rem;
+}
+.flag-list {
+  display: grid;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 0.8rem;
+}
+
+/* ── 블록 편집기 ── */
+.editor-main--blocks {
+  display: grid;
+  gap: 12px;
+}
+.block-mode {
+  display: grid;
+  gap: 12px;
+}
+.block-workspace {
+  height: calc(100vh - 300px);
+  min-height: 480px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.meta-form summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.meta-wide {
+  grid-column: 1 / -1;
+}
+.meta-grid .row input[type='number'] {
+  width: 5rem;
+}

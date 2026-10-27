@@ -1,0 +1,138 @@
+# 새 시나리오 템플릿 — 형식은 docs/기능명세서.md §6 참고
+# 저장 전에 meta.id 를 다른 시나리오와 겹치지 않게 바꾸세요 (영문 소문자 kebab-case, 저장 후에는 변경 불가)
+# Ctrl+Space 로 자동완성, 키 위에 마우스를 올리면 설명이 보입니다
+format_version: 1
+
+meta:
+  id: my-scenario
+  title: 나의 첫 시나리오
+  author: 이름
+  summary: 한두 문장으로 된 시나리오 소개.
+  players: { min: 1, max: 4 }
+  estimated_minutes: 30
+  rating: 전체
+  tags: [모험]
+  language: ko
+  start_scene: gate
+
+ruleset:
+  stats: [힘, 민첩, 지능]
+  resources:
+    hp: { max: "8 + 힘", min: 0 }
+  check: { dice: "1d20", formula: "roll + stat" }
+  critical: { success: 20, failure: 1 }
+  character_creation:
+    method: point_buy
+    total_points: 9
+    min_per_stat: 1
+    max_per_stat: 5
+    allow_custom: true
+  combat:
+    attack_stat: 힘
+    attack_dc: 10
+    damage: "1d6"
+    dodge: { stat: 민첩, dc: 11 }
+    flee: { stat: 민첩, dc: 12 }
+
+presets:
+  warrior:
+    name: 전사
+    description: 앞장서서 싸우는 사람.
+    stats: { 힘: 5, 민첩: 2, 지능: 2 }
+  scout:
+    name: 정찰병
+    description: 눈과 발이 빠른 사람.
+    stats: { 힘: 2, 민첩: 5, 지능: 2 }
+
+variables: {}
+
+ai_guide:
+  tone: 담백한 판타지 모험
+  narration_length: short
+  world_lore: |
+    작은 마을 외곽의 오래된 탑. 밤마다 탑 꼭대기에서 불빛이 깜빡인다.
+
+items:
+  old_key:
+    name: 낡은 열쇠
+    description: 녹슨 철 열쇠.
+    consumable: false
+    effects: []
+  herb:
+    name: 약초
+    description: 씹으면 상처가 아문다.
+    consumable: true
+    effects:
+      - { op: add_resource, resource: hp, value: "1d4" }
+
+npcs:
+  gatekeeper:
+    name: 문지기 노인
+    personality: 무뚝뚝하지만 친절하다.
+    speech_style: 짧은 반말
+    knows: [탑의 문은 낡은 열쇠로 열린다]
+    secrets: [탑의 주인은 노인의 딸이다]
+    fixed_lines:
+      greeting: "또 탑 구경 온 녀석인가."
+
+scenes:
+  gate:
+    name: 탑 입구
+    description: 덩굴로 뒤덮인 탑 앞. 문지기 노인이 졸고 있다.
+    npcs: [gatekeeper]
+    objects:
+      bush:
+        name: 수풀
+        on_examine:
+          condition: "not flag('bush_searched')"
+          locked_text: 더 찾을 것은 없다.
+          check: { stat: 지능, dc: 10 }
+          success:
+            - { op: set_flag, flag: bush_searched, value: true }
+            - { op: give_item, item: old_key }
+            - { op: give_item, item: herb }
+            - { op: narrate_hint, text: 수풀 속에서 낡은 열쇠와 약초를 찾았다. }
+          failure:
+            - { op: narrate_hint, text: 가시에 손을 긁혔다. }
+            - { op: add_resource, resource: hp, value: "-1" }
+    exits:
+      - to: tower
+        label: 탑 안
+        condition: "flag('door_open')"
+        locked_text: 문이 잠겨 있다.
+
+  tower:
+    name: 탑 꼭대기
+    description: 깜빡이는 등불 아래 거대한 박쥐가 매달려 있다.
+    on_enter:
+      - { op: start_combat, enemies: [giant_bat] }
+    exits:
+      - { to: gate, label: 계단 }
+
+events:
+  - id: open_door
+    trigger: { type: use_item, item: old_key, target: gate.exits.tower }
+    actions:
+      - { op: set_flag, flag: door_open, value: true }
+      - { op: narrate_hint, text: 열쇠가 돌아가고 문이 열렸다. }
+
+enemies:
+  giant_bat:
+    name: 거대 박쥐
+    hp: 10
+    attack: { dice: "1d4" }
+    behavior:
+      # 위에서부터 조건이 맞는 첫 행동. 예: - { when: "hp < 3", do: flee }
+      - { default: attack_random }
+    on_defeat:
+      - { op: set_flag, flag: bat_defeated, value: true }
+
+endings:
+  - id: clear
+    title: 탑의 불빛
+    condition: "flag('bat_defeated')"
+    text: 박쥐가 사라지자 등불이 고요해졌다.
+  - id: fallen
+    title: 쓰러짐
+    condition: "all_players_down()"
+    text: 탑은 오늘도 불을 깜빡인다.

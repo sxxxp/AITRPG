@@ -45,6 +45,112 @@ describe('주사위', () => {
   });
 });
 
+describe('대성공/대실패 갈래', () => {
+  const flag = (name: string) => [{ op: 'set_flag' as const, flag: name, value: true }];
+  const withBranch = (critical: boolean) => {
+    const s2 = structuredClone(sc);
+    s2.scenes.main_lobby.objects!.drum_row.on_examine = {
+      check: { stat: '눈치', dc: 12 },
+      success: flag('r_success'),
+      failure: flag('r_failure'),
+      ...(critical ? { critical_success: flag('r_crit_success'), critical_failure: flag('r_crit_failure') } : {}),
+    };
+    return s2;
+  };
+  /** 웹프로그래밍과(눈치 3)로 주사위를 고정해 드럼통 행렬을 살펴본 뒤 켜진 플래그 */
+  const examineWith = (scenario: typeof sc, roll: number) => {
+    const { state } = createGame(scenario, [{ name: '리아', presetId: 'web_dev' }], 1);
+    state.fixedRoll = roll;
+    const action = listActions(scenario, state, 'p1').find((a) => a.id === 'examine:drum_row')!;
+    return Object.keys(applyAction(scenario, state, 'p1', action).state.flags);
+  };
+
+  it('주사위 1/20 이면 대실패/대성공 갈래를, 그 외에는 일반 갈래를 실행한다', () => {
+    const s2 = withBranch(true);
+    assert.deepEqual(examineWith(s2, 1), ['r_crit_failure']);
+    assert.deepEqual(examineWith(s2, 2), ['r_failure']); // 2 + 3 < 12
+    assert.deepEqual(examineWith(s2, 19), ['r_success']); // 19 + 3 >= 12
+    assert.deepEqual(examineWith(s2, 20), ['r_crit_success']);
+  });
+
+  it('대성공/대실패 갈래가 없으면 success/failure 로 대체한다', () => {
+    const s2 = withBranch(false);
+    assert.deepEqual(examineWith(s2, 1), ['r_failure']);
+    assert.deepEqual(examineWith(s2, 20), ['r_success']);
+  });
+});
+
+describe('스탯 변경 (add_stat)', () => {
+  /** 드럼통 행렬 살펴보기를 주어진 연산으로 바꾼 시나리오 */
+  const withOps = (ops: { op: 'add_stat'; stat: string; value: number }[]) => {
+    const s2 = structuredClone(sc);
+    s2.scenes.main_lobby.objects!.drum_row.on_examine = { actions: ops };
+    return s2;
+  };
+  const run = (scenario: typeof sc, before?: (s: GameState) => void) => {
+    const { state } = createGame(scenario, [{ name: '리아', presetId: 'digital_contents' }], 1); // 체력 4, 눈치 4
+    before?.(state);
+    const action = listActions(scenario, state, 'p1').find((a) => a.id === 'examine:drum_row')!;
+    return applyAction(scenario, state, 'p1', action);
+  };
+
+  it('생성 상한(5)을 넘어 오르고, 연결된 최대 HP와 현재 HP도 함께 오른다', () => {
+    const { state, events } = run(withOps([{ op: 'add_stat', stat: '체력', value: 2 }]), (s) => {
+      s.party[0].resources.hp = 10; // 다친 상태
+    });
+    const c = state.party[0];
+    assert.equal(c.stats['체력'], 6);
+    assert.equal(c.resourceMax.hp, 16); // 10 + 체력
+    assert.equal(c.resources.hp, 12, '현재 HP도 최대치 증가분만큼');
+    const ev = events.find((e) => e.type === 'stat');
+    assert.ok(ev?.type === 'stat');
+    assert.deepEqual(ev.maxChanges, [{ resource: 'hp', delta: 2, max: 16 }]);
+  });
+
+  it('오른 스탯은 이후 판정에 반영된다', () => {
+    let { state } = run(withOps([{ op: 'add_stat', stat: '눈치', value: 1 }]));
+    state = go(state, 'cafeteria');
+    state.fixedRoll = 10;
+    const r = applyAction(sc, state, 'p1', listActions(sc, state, 'p1').find((a) => a.id === 'examine:dimichung')!);
+    const check = r.events.find((e) => e.type === 'check');
+    assert.ok(check?.type === 'check');
+    assert.equal(check.bonus, 5); // 눈치 4 + 1
+  });
+
+  it('스탯이 내려가면 최대 HP가 줄고 현재 HP는 새 최대치로 맞춰진다', () => {
+    const { state } = run(withOps([{ op: 'add_stat', stat: '체력', value: -3 }]));
+    const c = state.party[0];
+    assert.equal(c.stats['체력'], 1);
+    assert.equal(c.resourceMax.hp, 11);
+    assert.equal(c.resources.hp, 11);
+  });
+
+  // 이 describe 안에서만 쓰는 이동 도우미 (아래 '네오 디미고 진행'의 go 와 동일)
+  function go(state: GameState, to: string) {
+    const action = listActions(sc, state, 'p1').find((a) => a.kind === 'move' && a.to === to)!;
+    return applyAction(sc, state, 'p1', action).state;
+  }
+});
+
+describe('에디터 새 시나리오 템플릿', () => {
+  it('검증을 통과하고 처음부터 엔딩까지 진행할 수 있다', () => {
+    const tpl = loadScenarioFile(fileURLToPath(new URL('../../../../frontend/src/features/editor/template.yaml', import.meta.url)));
+    let { state } = createGame(tpl, [{ name: '리아', presetId: 'warrior' }], 1);
+    state.fixedRoll = 20;
+    const act = (id: string) => {
+      const action = listActions(tpl, state, 'p1').find((a) => a.id === id);
+      assert.ok(action, `${id} 없음: ${listActions(tpl, state, 'p1').map((a) => a.id).join(', ')}`);
+      state = applyAction(tpl, state, 'p1', action).state;
+    };
+    act('examine:bush');
+    act('use:old_key@gate.exits.tower');
+    act('move:0');
+    assert.ok(state.combat);
+    for (let i = 0; i < 20 && !state.ending; i++) act(listActions(tpl, state, 'p1').find((a) => a.kind === 'attack')!.id);
+    assert.equal(state.ending?.id, 'clear');
+  });
+});
+
 describe('네오 디미고 진행', () => {
   const start = () => {
     const { state } = createGame(sc, [{ name: '리아', presetId: 'digital_contents' }], 7);
@@ -145,6 +251,58 @@ describe('네오 디미고 진행', () => {
     assert.equal(s.ending?.id, 'back_to_weekend');
     assert.ok(all.some((e) => e.type === 'fixed' && e.text.includes('노트북 복구 완료')));
     assert.deepEqual(listActions(sc, s, 'p1'), []);
+  });
+
+  it('도주했다가 다시 만난 적은 남은 HP를 유지한다', () => {
+    let s = start();
+    s = go(s, 'cafeteria');
+    s.fixedRoll = 1; // 몰래 빼기 실패 → 전투
+    s = act(s, (id) => id === 'interact:dimichung').state;
+    const fullHp = s.combat!.enemies[0].maxHp;
+
+    s.fixedRoll = 20; // 공격 명중, 회피·도주 성공
+    s = act(s, (id) => id.startsWith('attack:')).state;
+    const woundedHp = s.combat!.enemies[0].hp;
+    assert.ok(woundedHp < fullHp);
+
+    s = act(s, (id) => id === 'flee').state;
+    assert.equal(s.combat, null);
+    assert.equal(s.sceneId, 'main_lobby');
+    assert.deepEqual(s.woundedEnemies, { 'cafeteria:dimichung': [woundedHp] });
+
+    s = go(s, 'cafeteria');
+    s.fixedRoll = 1;
+    const again = act(s, (id) => id === 'interact:dimichung');
+    const enemy = again.state.combat!.enemies[0];
+    assert.equal(enemy.hp, woundedHp, '지난 전투의 HP로 시작');
+    assert.equal(enemy.maxHp, fullHp, '최대 HP는 그대로');
+    assert.ok(again.events.some((e) => e.type === 'combat_start' && e.resumed.includes('거대 변이 디미충')));
+    assert.deepEqual(again.state.woundedEnemies, {}, '꺼내 쓴 기록은 지운다');
+  });
+
+  it('스스로 도망친 적도 남은 HP를 기억한다', () => {
+    let s = start();
+    s = go(s, 'cafeteria');
+    s.fixedRoll = 1;
+    s = act(s, (id) => id === 'interact:dimichung').state;
+    s.fixedRoll = 20;
+    // 디미충은 HP 8 미만이면 도망친다 (behavior: hp < 8 → flee)
+    for (let i = 0; i < 30 && s.combat; i++) s = act(s, (id) => id.startsWith('attack:')).state;
+    assert.equal(s.combat, null);
+    const [hp] = s.woundedEnemies['cafeteria:dimichung'];
+    assert.ok(hp > 0 && hp < 8);
+  });
+
+  it('처치한 적은 기억하지 않는다', () => {
+    let s = start();
+    s = go(s, 'smart_farm');
+    s.fixedRoll = 1; // 뿌리 뽑기 실패 → 식인 식물 2마리
+    s = act(s, (id) => id === 'interact:giant_root').state;
+    assert.equal(s.combat?.enemies.length, 2);
+    s.fixedRoll = 20;
+    for (let i = 0; i < 30 && s.combat; i++) s = act(s, (id) => id.startsWith('attack:')).state;
+    assert.equal(s.combat, null);
+    assert.deepEqual(s.woundedEnemies, {});
   });
 
   it('HP가 0이 되면 전멸 엔딩으로 끝난다', () => {

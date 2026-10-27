@@ -76,6 +76,10 @@ class Turn {
   }
 
   check(actor: CharacterState, spec: CheckSpec, reason: string): boolean {
+    return this.rollCheck(actor, spec, reason).success;
+  }
+
+  rollCheck(actor: CharacterState, spec: CheckSpec, reason: string): { success: boolean; critical: 'success' | 'failure' | null } {
     const roll = rollD20(this.state);
     const modifier = (spec.modifiers ?? [])
       .filter((m) => this.cond(m.when, actor))
@@ -86,7 +90,20 @@ class Turn {
     const critical = crit && roll === crit.success ? 'success' : crit && roll === crit.failure ? 'failure' : null;
     const success = critical === 'success' ? true : critical === 'failure' ? false : total >= spec.dc;
     this.events.push({ type: 'check', actor: actor.name, stat: spec.stat, roll, bonus, total, dc: spec.dc, success, critical, reason });
-    return success;
+    return { success, critical };
+  }
+
+  /** 판정(있으면) 후 결과 갈래 실행. 대성공/대실패 갈래가 없으면 success/failure 로 대체 */
+  runOutcome(b: Interaction | ScenarioEvent, actor: CharacterState, reason: string) {
+    if (!b.check) {
+      this.runOps(b.actions ?? [], actor);
+      return;
+    }
+    const { success, critical } = this.rollCheck(actor, b.check, reason);
+    const ops =
+      (critical === 'success' ? b.critical_success : critical === 'failure' ? b.critical_failure : undefined) ??
+      (success ? b.success : b.failure);
+    this.runOps(ops ?? [], actor);
   }
 
   runBranch(b: Interaction | ScenarioEvent, actor: CharacterState, reason: string, lockedFallback: string | null) {
@@ -95,12 +112,7 @@ class Turn {
       if (text) this.events.push({ type: 'locked', text });
       return false;
     }
-    if (b.check) {
-      const ok = this.check(actor, b.check, reason);
-      this.runOps((ok ? b.success : b.failure) ?? [], actor);
-    } else {
-      this.runOps(b.actions ?? [], actor);
-    }
+    this.runOutcome(b, actor, reason);
     return true;
   }
 
@@ -126,6 +138,9 @@ class Turn {
       case 'set_resource':
         this.changeResource(target, op.resource, rollDice(s, op.value) - (target.resources[op.resource] ?? 0));
         break;
+      case 'add_stat':
+        this.addStat(target, op.stat, op.value);
+        break;
       case 'set_flag':
         s.flags[op.flag] = op.value;
         break;
@@ -139,10 +154,7 @@ class Turn {
         this.startCombat(op.enemies);
         break;
       case 'end_combat':
-        if (s.combat) {
-          s.combat = null;
-          this.events.push({ type: 'combat_end', reason: 'victory' });
-        }
+        this.endCombat('victory');
         break;
       case 'apply_status':
         this.applyStatus(target, op.status, op.save);
@@ -197,6 +209,32 @@ class Turn {
       target.down = true;
       this.events.push({ type: 'down', actor: target.name });
     }
+  }
+
+  /**
+   * 스탯 변경. 캐릭터 생성 상한과 무관하게 오르며(최소 0),
+   * 스탯에 연결된 자원 최대/최소치(예: 최대 HP = 10 + 체력)를 다시 계산한다.
+   * 최대치가 오르면 현재값도 같은 만큼 오르고, 내려가면 새 최대치로 맞춘다.
+   */
+  addStat(target: CharacterState, stat: string, delta: number) {
+    if (!(stat in target.stats)) return;
+    const before = target.stats[stat];
+    target.stats[stat] = Math.max(0, before + delta);
+    const actual = target.stats[stat] - before;
+    if (actual === 0) return;
+
+    const ctx: ExprContext = { identifiers: target.stats, functions: {} };
+    const maxChanges: { resource: string; delta: number; max: number }[] = [];
+    for (const [rid, r] of Object.entries(this.sc.ruleset.resources)) {
+      const max = evaluateNumber(r.max, ctx);
+      const maxDelta = max - target.resourceMax[rid];
+      target.resourceMax[rid] = max;
+      target.resourceMin[rid] = evaluateNumber(r.min, ctx);
+      if (maxDelta !== 0) maxChanges.push({ resource: rid, delta: maxDelta, max });
+    }
+    this.events.push({ type: 'stat', actor: target.name, stat, delta: actual, value: target.stats[stat], maxChanges });
+    // delta 0 이면 새 범위로 맞추기만 한다
+    for (const change of maxChanges) this.changeResource(target, change.resource, Math.max(0, change.delta));
   }
 
   applyStatus(target: CharacterState, statusId: string, save?: { stat: string; dc: number }) {
@@ -264,12 +302,7 @@ class Turn {
       );
       if (!ev || this.state.ending) return;
       this.state.firedEvents.push(ev.id);
-      if (ev.check) {
-        const ok = this.check(actor, ev.check, ev.id);
-        this.runOps((ok ? ev.success : ev.failure) ?? [], actor);
-      } else {
-        this.runOps(ev.actions ?? [], actor);
-      }
+      this.runOutcome(ev, actor, ev.id);
     }
   }
 
@@ -292,21 +325,41 @@ class Turn {
   }
 
   startCombat(ids: string[]) {
+    const sceneId = this.state.combat?.sceneId ?? this.state.sceneId;
+    // 이 필드가 생기기 전에 만들어진 게임 상태 호환
+    const wounded = (this.state.woundedEnemies ??= {});
+    const resumed: string[] = [];
     const enemies = ids.map((id) => {
       const def = this.sc.enemies![id];
-      const hp = typeof def.hp === 'number' ? def.hp : evaluateNumber(def.hp, this.ctx());
-      return { uid: `e${this.state.nextEnemyUid++}`, id, name: def.name, hp, maxHp: hp, gone: null } satisfies EnemyState;
+      const maxHp = typeof def.hp === 'number' ? def.hp : evaluateNumber(def.hp, this.ctx());
+      // 처치하지 못하고 헤어진 같은 장면의 같은 적이면 남은 HP로 시작
+      const key = `${sceneId}:${id}`;
+      const saved = wounded[key]?.shift();
+      if (wounded[key]?.length === 0) delete wounded[key];
+      if (saved !== undefined) resumed.push(def.name);
+      const hp = saved !== undefined ? Math.min(saved, maxHp) : maxHp;
+      return { uid: `e${this.state.nextEnemyUid++}`, id, name: def.name, hp, maxHp, gone: null } satisfies EnemyState;
     });
     if (this.state.combat) this.state.combat.enemies.push(...enemies);
-    else this.state.combat = { enemies };
-    this.events.push({ type: 'combat_start', enemies: enemies.map((e) => e.name) });
+    else this.state.combat = { sceneId, enemies };
+    this.events.push({ type: 'combat_start', enemies: enemies.map((e) => e.name), resumed });
+  }
+
+  /** 전투 종료. 처치하지 못한 적(살아 있거나 도망친 적)의 남은 HP는 다음 대면을 위해 기억 */
+  endCombat(reason: 'victory' | 'escaped') {
+    const combat = this.state.combat;
+    if (!combat) return;
+    const wounded = (this.state.woundedEnemies ??= {});
+    for (const e of combat.enemies) {
+      if (e.gone === 'defeated' || e.hp >= e.maxHp) continue;
+      (wounded[`${combat.sceneId}:${e.id}`] ??= []).push(e.hp);
+    }
+    this.state.combat = null;
+    this.events.push({ type: 'combat_end', reason });
   }
 
   finishCombatIfDone() {
-    if (this.state.combat && this.activeEnemies().length === 0) {
-      this.state.combat = null;
-      this.events.push({ type: 'combat_end', reason: 'victory' });
-    }
+    if (this.state.combat && this.activeEnemies().length === 0) this.endCombat('victory');
   }
 
   playerAttack(actor: CharacterState, uid: string) {
@@ -332,8 +385,7 @@ class Turn {
   flee(actor: CharacterState) {
     const rules = combatRules(this.sc);
     if (!this.check(actor, rules.flee, '도주')) return;
-    this.state.combat = null;
-    this.events.push({ type: 'combat_end', reason: 'escaped' });
+    this.endCombat('escaped');
     if (this.state.prevSceneId) this.moveTo(this.state.prevSceneId, actor);
   }
 
@@ -510,6 +562,7 @@ export function createGame(sc: Scenario, players: PlayerSetup[], seed = Date.now
     vars: { ...(sc.variables ?? {}) },
     party: players.map((p, i) => buildCharacter(sc, p, i)),
     combat: null,
+    woundedEnemies: {},
     firedEvents: [],
     revealedSecrets: [],
     ending: null,

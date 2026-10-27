@@ -170,6 +170,9 @@ export function checkReferences(s: Scenario): RawIssue[] {
         case 'set_resource':
           if (!s.ruleset.resources[o.resource]) error([...p, 'resource'], `존재하지 않는 자원: ${o.resource}`);
           break;
+        case 'add_stat':
+          checkStat(o.stat, [...p, 'stat']);
+          break;
         case 'set_flag':
           flagsSet.add(o.flag);
           break;
@@ -195,7 +198,7 @@ export function checkReferences(s: Scenario): RawIssue[] {
           break;
         case 'reveal_secret':
           if (!npcs[o.npc]) error([...p, 'npc'], `존재하지 않는 NPC: ${o.npc}`);
-          else if (!npcs[o.npc].secrets.includes(o.secret)) error([...p, 'secret'], `${o.npc} 의 secrets 에 없는 문장입니다`);
+          else if (!npcs[o.npc].secrets.includes(o.secret)) error([...p, 'secret'], `${o.npc} 의 비밀(secrets) 목록에 없는 문장입니다. 목록의 문장과 글자까지 같아야 합니다`);
           break;
         case 'trigger_ending':
           if (!endingIds.has(o.ending)) error([...p, 'ending'], `존재하지 않는 엔딩: ${o.ending}`);
@@ -210,6 +213,11 @@ export function checkReferences(s: Scenario): RawIssue[] {
     checkOps(b.actions, [...path, 'actions'], fromScene);
     checkOps(b.success, [...path, 'success'], fromScene);
     checkOps(b.failure, [...path, 'failure'], fromScene);
+    checkOps(b.critical_success, [...path, 'critical_success'], fromScene);
+    checkOps(b.critical_failure, [...path, 'critical_failure'], fromScene);
+    if ((b.critical_success || b.critical_failure) && !s.ruleset.critical) {
+      warn(path, 'ruleset.critical 이 없으면 대성공/대실패가 발생하지 않습니다');
+    }
   };
 
   // meta / ruleset / presets

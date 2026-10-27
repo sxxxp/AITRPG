@@ -1,4 +1,4 @@
-import type { ActInput, AiStatus, GameSnapshot, GameView, PlayScenario, StreamEvent } from './types';
+import type { ActInput, AiStatus, DebugPatch, FeedEntry, GameSnapshot, GameView, PlayScenario, StreamEvent } from './types';
 
 // 플레이 API는 NDJSON 스트리밍을 읽어야 하고, 목 모드에서도 항상 실제 백엔드로 보내야 하므로
 // axios 클라이언트(목 어댑터 적용 대상) 대신 fetch 를 직접 사용한다.
@@ -33,8 +33,11 @@ export const playApi = {
   start: (scenarioId: string, player: { name: string; presetId: string }) =>
     request<GameSnapshot>('/games', { method: 'POST', body: JSON.stringify({ scenarioId, player }) }),
   get: (gameId: string) => request<GameSnapshot>(`/games/${gameId}`),
-  setFixedRoll: (gameId: string, fixedRoll: number | null) =>
-    request<GameView>(`/games/${gameId}/debug`, { method: 'PATCH', body: JSON.stringify({ fixedRoll }) }),
+  debug: (gameId: string, patch: DebugPatch) =>
+    request<{ view: GameView; entry: FeedEntry | null }>(`/games/${gameId}/debug`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
 
   /** 행동 전송. 서버가 보내는 이벤트를 도착하는 대로 onEvent 로 전달 */
   async act(gameId: string, input: ActInput, onEvent: (ev: StreamEvent) => void): Promise<void> {
